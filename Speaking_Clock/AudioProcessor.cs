@@ -6,7 +6,12 @@ namespace Speaking_Clock;
 public class AudioProcessor
 {
     private static readonly WienerFilter WienerFilter = new(3, 1000);
-
+    /// <summary>
+    /// Apply the Wiener filter to the input audio buffer.
+    /// </summary>
+    /// <param name="inputBuffer"></param>
+    /// <param name="waveFormat"></param>
+    /// <returns></returns>
     public static byte[] ApplyWienerFilter(byte[] inputBuffer, WaveFormat waveFormat)
     {
         // Step 1: Convert byte buffer (PCM) to float array for processing
