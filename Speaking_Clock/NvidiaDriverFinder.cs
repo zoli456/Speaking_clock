@@ -79,7 +79,12 @@ public static class NvidiaDriverFinder
         return null;
     }
 
-
+    /// <summary>
+    /// Parse the NVIDIA driver page to extract the download link.
+    /// </summary>
+    /// <param name="pageContent"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     private static async Task<string> ParseDriverNvidiaParseDriverDownloadLink(string pageContent)
     {
         // Load the page content into HtmlAgilityPack's HTML document
