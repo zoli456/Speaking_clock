@@ -1,0 +1,739 @@
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Security.Principal;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Win32;
+using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
+using SharpCompress.Archives;
+using SharpCompress.Archives.Zip;
+using SharpCompress.Common;
+using SharpCompress.Readers;
+using Speaking_clock.Properties;
+using Telerik.WinControls.UI;
+using Vanara.PInvoke;
+
+namespace Speaking_Clock;
+
+internal class Utils
+{/// <summary>
+///    Converts a character or key name to a hex keycode.
+/// </summary>
+/// <param name="key">Input character or key name.</param>
+/// <returns></returns>
+    internal static byte CharToHexKeyCode(string key)
+    {
+        var charToKeyCodeMap = new Dictionary<string, byte>
+        {
+            // Special keys
+            { "f1", 0x70 }, { "f2", 0x71 }, { "f3", 0x72 }, { "f4", 0x73 },
+            { "f5", 0x74 }, { "f6", 0x75 }, { "f7", 0x76 }, { "f8", 0x77 },
+            { "f9", 0x78 }, { "f10", 0x79 }, { "f11", 0x7A }, { "f12", 0x7B },
+            { "esc", 0x1B }, { "enter", 0x0D }, { "space", 0x20 }, { "tab", 0x09 },
+            { "shift", 0x10 }, { "ctrl", 0x11 }, { "alt", 0x12 }, { "backspace", 0x08 },
+            { "capslock", 0x14 }, { "leftarrow", 0x25 }, { "uparrow", 0x26 },
+            { "rightarrow", 0x27 }, { "downarrow", 0x28 }, { "insert", 0x2D },
+            { "delete", 0x2E }, { "home", 0x24 }, { "end", 0x23 }, { "pageup", 0x21 },
+            { "pagedown", 0x22 }, { "numlock", 0x90 }, { "scrolllock", 0x91 },
+            { "printscreen", 0x2C }, { "pause", 0x13 },
+            { "lshift", 0xA0 }, { "rshift", 0xA1 }, { "lcontrol", 0xA2 }, { "rcontrol", 0xA3 },
+            { "lalt", 0xA4 }, { "ralt", 0xA5 },
+
+            // Printable ASCII characters in lowercase
+            { "0", 0x30 }, { "1", 0x31 }, { "2", 0x32 }, { "3", 0x33 }, { "4", 0x34 }, { "5", 0x35 },
+            { "6", 0x36 }, { "7", 0x37 }, { "8", 0x38 }, { "9", 0x39 },
+            { "a", 0x41 }, { "b", 0x42 }, { "c", 0x43 }, { "d", 0x44 }, { "e", 0x45 }, { "f", 0x46 },
+            { "g", 0x47 }, { "h", 0x48 }, { "i", 0x49 }, { "j", 0x4A }, { "k", 0x4B }, { "l", 0x4C },
+            { "m", 0x4D }, { "n", 0x4E }, { "o", 0x4F }, { "p", 0x50 }, { "q", 0x51 }, { "r", 0x52 },
+            { "s", 0x53 }, { "t", 0x54 }, { "u", 0x55 }, { "v", 0x56 }, { "w", 0x57 }, { "x", 0x58 },
+            { "y", 0x59 }, { "z", 0x5A }
+        };
+
+        // Lookup the key string in the dictionary
+        if (charToKeyCodeMap.ContainsKey(key)) return charToKeyCodeMap[key]; // Return the corresponding hex keycode
+
+        return 0x00; // Return 0x00 if the key is not recognized
+    }
+
+    /// <summary>
+    /// Converts a hex keycode to a character or key name.
+    /// </summary>
+    /// <param name="hexKeyCode">Keycode in hexadecimal format.</param>
+    /// <returns></returns>
+    internal static string HexKeyCodeToChar(byte hexKeyCode)
+    {
+        var keyCodeMap = new Dictionary<byte, string>
+        {
+            // Special keys
+            { 0x70, "f1" }, { 0x71, "f2" }, { 0x72, "f3" }, { 0x73, "f4" },
+            { 0x74, "f5" }, { 0x75, "f6" }, { 0x76, "f7" }, { 0x77, "f8" },
+            { 0x78, "f9" }, { 0x79, "f10" }, { 0x7A, "f11" }, { 0x7B, "f12" },
+            { 0x1B, "esc" }, { 0x0D, "enter" }, { 0x20, "space" }, { 0x09, "tab" },
+            { 0x10, "shift" }, { 0x11, "ctrl" }, { 0x12, "alt" }, { 0x08, "backspace" },
+            { 0x14, "capslock" }, { 0x25, "leftarrow" }, { 0x26, "uparrow" },
+            { 0x27, "rightarrow" }, { 0x28, "downarrow" }, { 0x2D, "insert" },
+            { 0x2E, "delete" }, { 0x24, "home" }, { 0x23, "end" }, { 0x21, "pageup" },
+            { 0x22, "pagedown" }, { 0x90, "numlock" }, { 0x91, "scrolllock" },
+            { 0x2C, "printscreen" }, { 0x13, "pause" },
+            { 0xA0, "lshift" }, { 0xA1, "rshift" }, { 0xA2, "lcontrol" }, { 0xA3, "rcontrol" },
+            { 0xA4, "lalt" }, { 0xA5, "ralt" },
+
+            // Printable ASCII characters in lowercase
+            { 0x30, "0" }, { 0x31, "1" }, { 0x32, "2" }, { 0x33, "3" }, { 0x34, "4" }, { 0x35, "5" },
+            { 0x36, "6" }, { 0x37, "7" }, { 0x38, "8" }, { 0x39, "9" },
+            { 0x41, "a" }, { 0x42, "b" }, { 0x43, "c" }, { 0x44, "d" }, { 0x45, "e" }, { 0x46, "f" },
+            { 0x47, "g" }, { 0x48, "h" }, { 0x49, "i" }, { 0x4A, "j" }, { 0x4B, "k" }, { 0x4C, "l" },
+            { 0x4D, "m" }, { 0x4E, "n" }, { 0x4F, "o" }, { 0x50, "p" }, { 0x51, "q" }, { 0x52, "r" },
+            { 0x53, "s" }, { 0x54, "t" }, { 0x55, "u" }, { 0x56, "v" }, { 0x57, "w" }, { 0x58, "x" },
+            { 0x59, "y" }, { 0x5A, "z" }
+        };
+
+        // Look up the keycode in the dictionary
+        if (keyCodeMap.ContainsKey(hexKeyCode)) return keyCodeMap[hexKeyCode]; // Return the mapped name or character
+
+        return "unknown key"; // Return "unknown key" if the key is not recognized
+    }
+    /// <summary>
+    /// Checks if a process with the specified name is playing audio.
+    /// </summary>
+    /// <param name="processName">The name of the process to check.</param>
+    /// <returns></returns>
+    public static bool IsProcessPlayingAudio(string processName)
+    {
+        // Get the processes by name (without the .exe extension)
+        var processes = Process.GetProcessesByName(processName);
+
+        if (processes == null || processes.Length == 0) return false;
+
+        // Get active audio devices (like speakers)
+        var enumerator = new MMDeviceEnumerator();
+        var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+
+        foreach (var device in devices)
+        {
+            var sessions = device.AudioSessionManager.Sessions;
+
+            for (var i = 0; i < sessions.Count; i++)
+            {
+                var session = sessions[i];
+                // Compare session process ID with the found processes
+                foreach (var process in processes)
+                    if (session.GetProcessID == process.Id)
+                        if (session.State == AudioSessionState.AudioSessionStateActive)
+                            return true; // Process is playing audio
+            }
+        }
+
+        return false; // Process is not playing audio
+    }
+
+    internal static string GetDefaultBrowser()
+    {
+        var browser = string.Empty;
+        try
+        {
+            // Path to the registry key for default HTTP handler
+            var regKey =
+                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice";
+            var progId = (string)Registry.GetValue(regKey, "ProgId", null);
+
+            if (progId != null)
+            {
+                // Open the corresponding registry entry to fetch the executable
+                var browserKeyPath = $@"HKEY_CLASSES_ROOT\{progId}\shell\open\command";
+                var browserCommand = (string)Registry.GetValue(browserKeyPath, "", null);
+
+                if (!string.IsNullOrEmpty(browserCommand))
+                {
+                    // Clean up the command string
+                    var firstQuote = browserCommand.IndexOf('"');
+                    var secondQuote = browserCommand.IndexOf('"', firstQuote + 1);
+                    if (firstQuote >= 0 && secondQuote > firstQuote)
+                        browser = browserCommand.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("Error retrieving default browser: " + ex.Message);
+        }
+
+        return browser;
+    }
+
+    internal static string GetOrCreateSpeakingClockPath()
+    {
+        // Get the path to the user's Pictures directory
+        var picturesPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+
+        // Define the path for the Speaking_clock directory
+        var speakingClockPath = Path.Combine(picturesPath, "Speaking_clock");
+
+        // Check if the Speaking_clock directory exists; if not, create it
+        if (!Directory.Exists(speakingClockPath)) Directory.CreateDirectory(speakingClockPath);
+
+        // Generate a timestamped filename
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        var fileName = $"{timestamp}.png";
+
+        // Combine the directory and filename
+        return Path.Combine(speakingClockPath, fileName);
+    }
+
+    internal static Image AddWatermark(Image image, string watermarkText)
+    {
+        // Create a new bitmap with the same dimensions as the original image
+        var watermarkedImage = new Bitmap(image.Width, image.Height);
+
+        // Draw the original image onto the new bitmap
+        using (var graphics = Graphics.FromImage(watermarkedImage))
+        {
+            graphics.DrawImage(image, 0, 0, image.Width, image.Height);
+
+            // Set up font and brush for the watermark
+            using var watermarkFont = new Font("Arial", 24, FontStyle.Bold, GraphicsUnit.Pixel);
+            using var watermarkBrush = new SolidBrush(Color.FromArgb(255, 255, 255, 255)); // Semi-transparent white
+
+            // Position watermark at the bottom-right corner
+            var textSize = graphics.MeasureString(watermarkText, watermarkFont);
+            var x = image.Width - textSize.Width - 10;
+            var y = image.Height - textSize.Height - 10;
+
+            // Draw watermark text on the image
+            graphics.DrawString(watermarkText, watermarkFont, watermarkBrush, x, y);
+        }
+
+        return watermarkedImage;
+    }
+
+    public static float GetSystemDpi()
+    {
+        // Create a graphics object from the primary screen
+        using (var graphics = Graphics.FromHwnd(IntPtr.Zero))
+        {
+            // Get the DPI X (horizontal DPI)
+            return graphics.DpiX;
+        }
+    }
+
+    internal static IntPtr GetFullscreenGameHandle()
+    {
+        // Get the handle of the active window
+        var hWnd = User32.GetForegroundWindow();
+        if (hWnd == IntPtr.Zero) return IntPtr.Zero;
+
+        // Check if the window is minimized
+        if (User32.IsIconic(hWnd))
+            return IntPtr.Zero;
+
+        // Get window style and extended style
+        var style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_STYLE);
+        var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+
+        // Get window dimensions
+        if (!User32.GetWindowRect(hWnd, out var windowRect))
+            return IntPtr.Zero;
+
+        // Determine the monitor the window is on
+        var screen = Screen.AllScreens.FirstOrDefault(s => s.Bounds.IntersectsWith(new Rectangle(
+            windowRect.left, windowRect.top,
+            windowRect.right - windowRect.left,
+            windowRect.bottom - windowRect.top)));
+
+        if (screen == null) return IntPtr.Zero;
+
+        // Check if the window covers the entire monitor area
+        var isFullScreen = windowRect.left <= screen.Bounds.Left && windowRect.top <= screen.Bounds.Top &&
+                           windowRect.right >= screen.Bounds.Right && windowRect.bottom >= screen.Bounds.Bottom;
+
+        // Check if the window is borderless or uses overlapping style
+        var isBorderless =
+            (style & unchecked((int)User32.WindowStyles.WS_POPUP)) == unchecked((int)User32.WindowStyles.WS_POPUP) ||
+            (style & unchecked((int)User32.WindowStyles.WS_OVERLAPPEDWINDOW)) !=
+            unchecked((int)User32.WindowStyles.WS_OVERLAPPEDWINDOW);
+        var isTopmost = (exStyle & (uint)User32.WindowStylesEx.WS_EX_TOPMOST) != 0;
+
+        // Return the handle if the window is in fullscreen mode, otherwise return IntPtr.Zero
+        return (IntPtr)(isFullScreen && (isBorderless || isTopmost) ? hWnd : IntPtr.Zero);
+    }
+
+    public static List<string> RendezesElsoBetuAlapjan(List<string> lista)
+    {
+        return lista.OrderBy(s => s[0]).ToList();
+    }
+
+    internal static async Task DownloadAndInstallLatestRelease(string owner, string repo, int index, string argument)
+    {
+        using var client = new HttpClient();
+
+        var apiUrl = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
+        client.DefaultRequestHeaders.UserAgent.TryParseAdd(
+            Beallitasok.UserAgent);
+
+        var response = await client.GetAsync(apiUrl);
+        response.EnsureSuccessStatusCode();
+
+        var jsonResponse = await response.Content.ReadAsStringAsync();
+
+        using var doc = JsonDocument.Parse(jsonResponse);
+        var assetUrl = doc.RootElement
+            .GetProperty("assets")[index]
+            .GetProperty("browser_download_url")
+            .GetString();
+        var assetName = Path.GetFileName(assetUrl);
+
+        Debug.WriteLine($"Downloading {assetName} using optimized downloader...");
+
+        var filePath = Path.Combine(Path.GetTempPath(), assetName);
+        await DownloadFileMultiThreaded(assetUrl, filePath, client, 10 * 1024 * 1024, 3);
+
+        Debug.WriteLine($"Downloaded to {filePath}");
+
+        Debug.WriteLine("Starting installation...");
+        RunSilentInstaller(filePath, argument);
+
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+            Debug.WriteLine("Temporary file deleted.");
+        }
+    }
+
+    internal static async Task DownloadAndInstallDirectX9()
+    {
+        var directXUrl =
+            "https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe";
+        var fileName = "directx_Jun2010_redist.exe";
+
+        Debug.WriteLine($"Downloading {fileName}...");
+        var filePath = Path.Combine(Path.GetTempPath(), fileName);
+
+        using var client = new HttpClient();
+        await DownloadFileMultiThreaded(directXUrl, filePath, client, 10 * 1024 * 1024, 3);
+
+        Debug.WriteLine($"Downloaded DirectX runtime to {filePath}");
+
+        // Temporary extraction directory for DirectX installer files
+        var extractionPath = Path.Combine(Path.GetTempPath(), "DirectXTemp");
+
+        // Run the DirectX redistributable installer with proper arguments
+        Debug.WriteLine("Starting installation...");
+        RunSilentInstaller(filePath, $"/Q /T:\"{extractionPath}\"");
+
+        // Run the extracted DirectX setup silently
+        var setupPath = Path.Combine(extractionPath, "DXSETUP.exe");
+        if (File.Exists(setupPath))
+        {
+            RunSilentInstaller(setupPath, "/silent");
+
+            // Cleanup extracted files
+            Directory.Delete(extractionPath, true);
+            Debug.WriteLine("DirectX installation files cleaned up.");
+        }
+        else
+        {
+            Debug.WriteLine("DXSETUP.exe not found. Installation failed.");
+        }
+
+        // Cleanup downloaded installer
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+            Debug.WriteLine("Temporary file deleted.");
+        }
+    }
+    /// <summary>
+    /// Downloads a file from the specified URL using multiple threads and saves it to the destination path.
+    /// </summary>
+    /// <param name="url">URL of the file to download.</param>
+    /// <param name="destinationPath">Destination path to save the downloaded file.</param>
+    /// <param name="client">HttpClient instance to use for downloading the file.</param>
+    /// <param name="chunkSize">Chunk size in bytes to download in each request.</param>
+    /// <param name="maxRetries">Maximum number of retries for each chunk.</param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    internal static async Task DownloadFileMultiThreaded(string url, string destinationPath, HttpClient client,
+        int chunkSize, int maxRetries)
+    {
+        var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+        response.EnsureSuccessStatusCode();
+
+        if (!response.Content.Headers.ContentLength.HasValue)
+            throw new InvalidOperationException("File size unknown, cannot perform multi-threaded download.");
+
+        var totalFileSize = response.Content.Headers.ContentLength.Value;
+        var ranges = new ConcurrentBag<(long start, long end)>();
+        for (long i = 0; i < totalFileSize; i += chunkSize)
+        {
+            var end = Math.Min(i + chunkSize - 1, totalFileSize - 1);
+            ranges.Add((i, end));
+        }
+
+        // Open the destination file in write mode
+        using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+        // Pre-allocate the file size to improve performance
+        fileStream.SetLength(totalFileSize);
+
+        var tasks = new ConcurrentBag<Task>();
+
+        foreach (var range in ranges)
+            tasks.Add(Task.Run(async () =>
+            {
+                var retries = 0;
+                while (retries < maxRetries)
+                    try
+                    {
+                        var request = new HttpRequestMessage(HttpMethod.Get, url);
+                        request.Headers.Range = new RangeHeaderValue(range.start, range.end);
+                        var partResponse = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                        partResponse.EnsureSuccessStatusCode();
+
+                        using var partStream = await partResponse.Content.ReadAsStreamAsync();
+                        // Lock to write the chunk directly to the file
+                        lock (fileStream)
+                        {
+                            fileStream.Seek(range.start, SeekOrigin.Begin);
+                            partStream.CopyTo(fileStream);
+                        }
+
+                        break;
+                    }
+                    catch
+                    {
+                        retries++;
+                        if (retries == maxRetries)
+                            throw;
+                    }
+
+                Debug.WriteLine($"Downloaded and saved chunk {range.start}-{range.end}.");
+            }));
+
+        await Task.WhenAll(tasks);
+    }
+
+
+    internal static void RunSilentInstaller(string filePath, string arguments)
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = filePath,
+                Arguments = arguments,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            }
+        };
+
+        process.Start();
+        process.WaitForExit();
+
+        if (process.ExitCode == 0)
+            MessageBox.Show("Telepítés sikerült.", "Információ", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        else
+            MessageBox.Show($"Telepítés nem sikerült ezzel a kóddal: {process.ExitCode}.", "Hiba", MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+    }
+
+    internal static void EnableWindowsFeature(string featureName)
+    {
+        try
+        {
+            // Create a process to run the DISM command
+            var process = new Process();
+            process.StartInfo.FileName = "dism.exe";
+            process.StartInfo.Arguments = $"/online /enable-feature /featurename:{featureName} /all";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.CreateNoWindow = true;
+
+            // Start the process
+            process.Start();
+
+            // Read the output
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+
+            // Wait for the process to complete
+            process.WaitForExit();
+
+            // Check the exit code
+            if (process.ExitCode == 0)
+                MessageBox.Show($"Sikerült bekacsolni a {featureName} szolgáltatást.", "Információ",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            else
+                MessageBox.Show($"Nem sikerült bekapcsolni a {featureName} szolgáltatást. Hiba: {error}", "Hiba",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"An error occurred: {ex.Message}");
+        }
+    }
+
+    internal static void AddFolderToDefenderExclusions()
+    {
+        // Open folder selection dialog
+        using (var folderDialog = new FolderBrowserDialog())
+        {
+            folderDialog.UseDescriptionForTitle = true;
+            folderDialog.Description = "Mely mappát adjam a kivételek közé?";
+            if (folderDialog.ShowDialog() == DialogResult.OK)
+            {
+                var folderPath = folderDialog.SelectedPath;
+
+                // Add the folder to Windows Defender exclusions using PowerShell
+                var command = $"Add-MpPreference -ExclusionPath \\\"{folderPath}\\\"";
+
+                ExecutePowerShellCommand(command);
+
+                MessageBox.Show($"\"{folderPath}\" hozzá lett adva a kivételek közé.", "Információ",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                Debug.WriteLine("No folder was selected.");
+            }
+        }
+    }
+
+    internal static bool IsAdministrator()
+    {
+        using (var identity = WindowsIdentity.GetCurrent())
+        {
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+    }
+
+    private static void ExecutePowerShellCommand(string command)
+    {
+        var processInfo = new ProcessStartInfo
+        {
+            FileName = "powershell",
+            Arguments = $"-inputformat none -outputformat none -NonInteractive -Command {command}",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using (var process = Process.Start(processInfo))
+        {
+            if (process == null)
+                MessageBox.Show("Nem sikerült elindítani a PowerShellt!", "Hiba", MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+            process.WaitForExit();
+
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+
+            if (process.ExitCode != 0 && process.ExitCode != 1)
+                MessageBox.Show("Hiba történt!", "Hiba", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+            Debug.WriteLine(output);
+        }
+    }
+
+    internal static void ExtractPasswordProtectedZip(string zipFilePath, string password)
+    {
+        // Show folder selector dialog
+        using (var folderDialog = new FolderBrowserDialog())
+        {
+            folderDialog.UseDescriptionForTitle = true;
+            folderDialog.Description = "Válassz egy mappát ahová kerüljön";
+
+            if (folderDialog.ShowDialog() == DialogResult.OK)
+            {
+                var destinationPath = folderDialog.SelectedPath;
+
+                try
+                {
+                    // Open the ZIP archive with SharpCompress
+                    using (var archive = ZipArchive.Open(zipFilePath, new ReaderOptions { Password = password }))
+                    {
+                        foreach (var entry in archive.Entries)
+                            if (!entry.IsDirectory)
+                            {
+                                var destinationFilePath = Path.Combine(destinationPath, entry.Key);
+
+                                // Ensure the directory exists
+                                Directory.CreateDirectory(Path.GetDirectoryName(destinationFilePath)!);
+
+                                // Extract the file
+                                entry.WriteToFile(destinationFilePath);
+                                Debug.WriteLine($"Extracted: {entry.Key}");
+                            }
+                    }
+
+                    MessageBox.Show("Fájlok beillesztése sikerült!", "Információ", MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Egy hiba történt: {ex.Message}", "Hiba", MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nem válaszottál ki mappát.", "Hiba", MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Encrypts a file using AES encryption and writes the result to another file.
+    /// </summary>
+    internal static void EncryptFile(string inputFilePath, string outputFilePath, string key)
+    {
+        if (string.IsNullOrEmpty(inputFilePath) || !File.Exists(inputFilePath))
+            throw new ArgumentException("Input file path is invalid.");
+        if (string.IsNullOrEmpty(outputFilePath))
+            throw new ArgumentException("Output file path cannot be null or empty.");
+        if (string.IsNullOrEmpty(key))
+            throw new ArgumentNullException(nameof(key), "Key cannot be null or empty.");
+
+        try
+        {
+            // Derive a 32-byte (256-bit) key from the input key
+            byte[] keyBytes;
+            using (var sha256 = SHA256.Create())
+            {
+                keyBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
+            }
+
+            using (var aes = Aes.Create())
+            {
+                aes.Key = keyBytes;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                // Generate a random IV
+                aes.GenerateIV();
+                var iv = aes.IV;
+
+                using (var inputFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
+                using (var outputFileStream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write))
+                {
+                    // Write the IV at the start of the output file
+                    outputFileStream.Write(iv, 0, iv.Length);
+
+                    // Encrypt the input file content
+                    using (var encryptor = aes.CreateEncryptor())
+                    using (var cryptoStream = new CryptoStream(outputFileStream, encryptor, CryptoStreamMode.Write))
+                    {
+                        inputFileStream.CopyTo(cryptoStream);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Encryption failed.", ex);
+        }
+    }
+
+    /// <summary>
+    ///     Decrypts a file encrypted using AES encryption and reads the decrypted content into memory.
+    /// </summary>
+    internal static byte[] DecryptFileToMemory(string inputFilePath, string key)
+    {
+        if (string.IsNullOrEmpty(inputFilePath) || !File.Exists(inputFilePath))
+            throw new ArgumentException("Input file path is invalid.");
+        if (string.IsNullOrEmpty(key))
+            throw new ArgumentNullException(nameof(key), "Key cannot be null or empty.");
+
+        try
+        {
+            // Derive a 32-byte (256-bit) key from the input key
+            byte[] keyBytes;
+            using (var sha256 = SHA256.Create())
+            {
+                keyBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
+            }
+
+            using (var inputFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
+            {
+                // Read the IV from the start of the input file
+                var iv = new byte[16];
+                inputFileStream.Read(iv, 0, iv.Length);
+
+                using (var aes = Aes.Create())
+                {
+                    aes.Key = keyBytes;
+                    aes.IV = iv;
+                    aes.Mode = CipherMode.CBC;
+                    aes.Padding = PaddingMode.PKCS7;
+
+                    // Decrypt the file content
+                    using (var decryptor = aes.CreateDecryptor())
+                    using (var cryptoStream = new CryptoStream(inputFileStream, decryptor, CryptoStreamMode.Read))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        cryptoStream.CopyTo(memoryStream);
+                        return memoryStream.ToArray();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Decryption failed.", ex);
+        }
+    }
+
+    internal static void ShowAlert(string captionText, string contentText, int time)
+    {
+        var alert = new RadDesktopAlert
+        {
+            CaptionText = captionText,
+            ContentText = contentText,
+            AutoCloseDelay = time,
+            FadeAnimationType = FadeAnimationType.FadeIn,
+            ContentImage = Resources.clock,
+            AutoSize = true
+        };
+        alert.Closed += (sender, args) => alert.Dispose();
+        alert.Show();
+    }
+
+
+    internal static Dictionary<string, MemoryStream> LoadPasswordProtectedZipIntoMemory(string zipFilePath,
+        string password)
+    {
+        var filesInMemory = new Dictionary<string, MemoryStream>();
+
+        // Open the zip archive
+        using var archive = ZipArchive.Open(zipFilePath, new ReaderOptions
+        {
+            Password = password,
+            ArchiveEncoding = new ArchiveEncoding
+            {
+                Default = Encoding.Latin1
+            }
+        });
+        // Iterate through each entry in the zip file
+        foreach (var entry in archive.Entries)
+        {
+            // Check if the entry is not a directory and is encrypted
+            if (entry.IsDirectory || !entry.IsEncrypted) continue;
+            var memoryStream = new MemoryStream();
+            // Write the entry into memory stream
+            entry.WriteTo(memoryStream);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+
+            // Store in dictionary with entry key as filename
+            filesInMemory.Add(entry.Key, memoryStream);
+        }
+
+        return filesInMemory;
+    }
+}

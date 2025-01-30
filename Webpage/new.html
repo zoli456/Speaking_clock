@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Unscramble HTML Content</title>
+  <style>
+    .scrambled {
+      font-family: monospace; /* Makes scrambled content look distinct */
+      color: gray;
+    }
+    .unscrambled {
+      font-family: inherit;
+      color: black;
+    }
+  </style>
+</head>
+<body>
+  <h1>Auto Unscramble HTML Content</h1>
+  
+  <div id="scrambledContent" class="scrambled" data-encoded="PGRpdiBzdHlsZT0nY29sb3I6Ymx1ZTsnPkhlbGxvLCB0aGlzIGlzIGR5bmFtaWNhbGx5IHVuc2NyYW1ibGVkIEhUTUwhPC9kaXY+">
+    Scrambled content will be decoded automatically.
+  </div>
+
+  <script>
+    // Function to decode Base64 strings
+    function decodeBase64(encoded) {
+      return atob(encoded);
+    }
+
+    // Unscramble content on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const contentDiv = document.getElementById('scrambledContent');
+      const encodedContent = contentDiv.getAttribute('data-encoded');
+      if (encodedContent) {
+        const decodedContent = decodeBase64(encodedContent);
+        contentDiv.innerHTML = decodedContent; // Interpret decoded content as HTML
+        contentDiv.classList.remove('scrambled');
+        contentDiv.classList.add('unscrambled');
+      }
+    });
+  </script>
+</body>
+</html>
