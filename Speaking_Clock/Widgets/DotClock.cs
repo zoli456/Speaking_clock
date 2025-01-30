@@ -23,7 +23,15 @@ public class DotMatrixClock : RenderForm
     private Point _mouseDownLocation;
     private ID2D1HwndRenderTarget _renderTarget;
     private bool _showColon = true;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DotMatrixClock"/> class.
+    /// </summary>
+    /// <param name="showSeconds"></param>
+    /// <param name="startX"></param>
+    /// <param name="startY"></param>
+    /// <param name="DotSize"></param>
+    /// <param name="DotSpacing"></param>
+    /// <param name="DigitSpacing"></param>
     public DotMatrixClock(bool showSeconds, int startX, int startY, int DotSize = 10, int DotSpacing = 15,
         float DigitSpacing = 80)
     {

@@ -30,7 +30,11 @@ public class CalendarWidget : RenderForm, IDisposable
     private Point dragOffset;
     private bool isDragging;
     private ID2D1SolidColorBrush textBrush;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CalendarWidget"/> class.
+    /// </summary>
+    /// <param name="startX"></param>
+    /// <param name="startY"></param>
     public CalendarWidget(int startX = 100, int startY = 100)
     {
         // Form settings

@@ -29,7 +29,12 @@ public class RadioPlayerWidget : RenderForm
     private ID2D1SolidColorBrush _textBrush;
     private float _volume = 0.05f; // Default volume: 5%
     private string currentRadioName, currentRadioURL;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioPlayerWidget"/> class.
+    /// </summary>
+    /// <param name="startX"></param>
+    /// <param name="startY"></param>
+    /// <param name="scale"></param>
     public RadioPlayerWidget(int startX, int startY, float scale = 1f)
     {
         SetStyle(ControlStyles.SupportsTransparentBackColor, true);

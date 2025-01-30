@@ -189,7 +189,10 @@ public partial class Beallitasok : Form
     {
         base.SetVisibleCore(isVisibleCore);
     }
-
+    /// <summary>
+    /// Play the current time
+    /// </summary>
+    /// <returns></returns>
     internal static async Task Most_mod()
     {
         while (Lejátszás) await Task.Delay(100);
@@ -236,7 +239,11 @@ public partial class Beallitasok : Form
 
         return hour;
     }
-
+    /// <summary>
+    /// Play a sound file
+    /// </summary>
+    /// <param name="file"></param>
+    /// <returns></returns>
     internal static async Task<bool> PlaySound(string file)
     {
         Lejátszás = true;
@@ -624,7 +631,11 @@ public partial class Beallitasok : Form
         button4.Enabled = true;
     }
 
-
+    /// <summary>
+    /// Change the system time
+    /// </summary>
+    /// <param name="newDate"></param>
+    /// <exception cref="Win32Exception"></exception>
     private static void ChangeDateTime(DateTime newDate)
     {
         var dateTime = newDate.ToUniversalTime();
@@ -714,7 +725,10 @@ public partial class Beallitasok : Form
         Application.Exit();
     }
 
-    // Function to simulate a real key press
+    /// <summary>
+    /// Simulate a key press
+    /// </summary>
+    /// <param name="keyCode"></param>
     internal static void SimulateRealKeyPress(byte keyCode)
     {
         // Simulate key down event
@@ -728,7 +742,10 @@ public partial class Beallitasok : Form
         User32.keybd_event(keyCode, 0, User32.KEYEVENTF.KEYEVENTF_KEYUP,
             IntPtr.Zero); // Using IntPtr.Zero for the last argument
     }
-
+    /// <summary>
+    /// Announce the current weather
+    /// </summary>
+    /// <returns></returns>
     internal static async Task AnnounceWeather()
     {
         if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
@@ -792,7 +809,10 @@ public partial class Beallitasok : Form
 
         DataServices.PlayStream(_weatherSound, 1.3f);
     }
-
+    /// <summary>
+    /// Announce the forecast for the next day
+    /// </summary>
+    /// <returns></returns>
     internal static async Task AnnounceForecast()
     {
         if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
@@ -871,7 +891,10 @@ public partial class Beallitasok : Form
         DataServices.PlayStream(_forecastSound, 1.3f);
     }
 
-
+    /// <summary>
+    /// Announce the name days of the day
+    /// </summary>
+    /// <returns></returns>
     internal static async Task AnnounceNameDay()
     {
         if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
@@ -963,7 +986,12 @@ public partial class Beallitasok : Form
         AnnounceNameDay();
     }
 
-
+    /// <summary>
+    /// Start playing a radio station
+    /// </summary>
+    /// <param name="url"></param>
+    /// <param name="randioName"></param>
+    /// <returns></returns>
     internal static async Task StartRadio(string url, string randioName)
     {
         if (WidgetSection["Rádió_Bekapcsolva"].BoolValue && radioPlayerWidget._isPlaying) return;
@@ -1025,7 +1053,9 @@ public partial class Beallitasok : Form
         /* if (!FullScreenChecker.IsAppInFullScreen())
              GmailMailChecker.CheckForUnreadEmailsAsync(GmailSection["Utolsó_ellenőrzés"].DateTimeValue);*/
     }
-
+    /// <summary>
+    /// Reset the buttons for the custom warnings
+    /// </summary>
     internal static void ResetCustomButtons()
     {
         foreach (ToolStripItem item in _warnings.DropDownItems)
@@ -1036,7 +1066,9 @@ public partial class Beallitasok : Form
             if (item is RadMenuItem menuItem)
                 menuItem.IsChecked = false; // Uncheck the item
     }
-
+    /// <summary>
+    /// Initalize the application after a small delay
+    /// </summary>
     private static void PostLauchSetup()
     {
         Task.Run(async () =>
