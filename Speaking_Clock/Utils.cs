@@ -129,10 +129,7 @@ internal class Utils
 
         return false; // Process is not playing audio
     }
-    /// <summary>
-    /// Gets the default browser executable path from the registry.
-    /// </summary>
-    /// <returns></returns>
+
     internal static string GetDefaultBrowser()
     {
         var browser = string.Empty;
@@ -166,10 +163,7 @@ internal class Utils
 
         return browser;
     }
-    /// <summary>
-    /// Gets the path to the user's Pictures directory and creates a Speaking_clock subdirectory.
-    /// </summary>
-    /// <returns></returns>
+
     internal static string GetOrCreateSpeakingClockPath()
     {
         // Get the path to the user's Pictures directory
@@ -188,12 +182,7 @@ internal class Utils
         // Combine the directory and filename
         return Path.Combine(speakingClockPath, fileName);
     }
-    /// <summary>
-    /// Adds a watermark text to an image and returns the watermarked image.
-    /// </summary>
-    /// <param name="image"></param>
-    /// <param name="watermarkText"></param>
-    /// <returns></returns>
+
     internal static Image AddWatermark(Image image, string watermarkText)
     {
         // Create a new bitmap with the same dimensions as the original image
@@ -275,14 +264,7 @@ internal class Utils
     {
         return lista.OrderBy(s => s[0]).ToList();
     }
-    /// <summary>
-    /// Downloads and installs the latest release of a GitHub repository using the GitHub API.
-    /// </summary>
-    /// <param name="owner"></param>
-    /// <param name="repo"></param>
-    /// <param name="index"></param>
-    /// <param name="argument"></param>
-    /// <returns></returns>
+
     internal static async Task DownloadAndInstallLatestRelease(string owner, string repo, int index, string argument)
     {
         using var client = new HttpClient();
@@ -319,10 +301,7 @@ internal class Utils
             Debug.WriteLine("Temporary file deleted.");
         }
     }
-    /// <summary>
-    /// Downloads and installs the DirectX 9 runtime using a multi-threaded download method.
-    /// </summary>
-    /// <returns></returns>
+
     internal static async Task DownloadAndInstallDirectX9()
     {
         var directXUrl =
@@ -435,11 +414,8 @@ internal class Utils
 
         await Task.WhenAll(tasks);
     }
-    /// <summary>
-    /// Runs a silent installer with the specified file path and arguments.
-    /// </summary>
-    /// <param name="filePath"></param>
-    /// <param name="arguments"></param>
+
+
     internal static void RunSilentInstaller(string filePath, string arguments)
     {
         var process = new Process
@@ -462,10 +438,7 @@ internal class Utils
             MessageBox.Show($"Telepítés nem sikerült ezzel a kóddal: {process.ExitCode}.", "Hiba", MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
     }
-    /// <summary>
-    /// Enables a Windows feature using the DISM command-line tool.
-    /// </summary>
-    /// <param name="featureName"></param>
+
     internal static void EnableWindowsFeature(string featureName)
     {
         try
@@ -502,9 +475,7 @@ internal class Utils
             Debug.WriteLine($"An error occurred: {ex.Message}");
         }
     }
-    /// <summary>
-    /// Adds a folder to Windows Defender exclusions.
-    /// </summary>
+
     internal static void AddFolderToDefenderExclusions()
     {
         // Open folder selection dialog
@@ -539,10 +510,7 @@ internal class Utils
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
     }
-    /// <summary>
-    /// Executes a PowerShell command with the specified arguments.
-    /// </summary>
-    /// <param name="command"></param>
+
     private static void ExecutePowerShellCommand(string command)
     {
         var processInfo = new ProcessStartInfo
@@ -572,11 +540,7 @@ internal class Utils
             Debug.WriteLine(output);
         }
     }
-    /// <summary>
-    /// Extracts a password-protected ZIP archive to a specified folder.
-    /// </summary>
-    /// <param name="zipFilePath"></param>
-    /// <param name="password"></param>
+
     internal static void ExtractPasswordProtectedZip(string zipFilePath, string password)
     {
         // Show folder selector dialog
@@ -624,15 +588,10 @@ internal class Utils
             }
         }
     }
+
     /// <summary>
-    /// Encrypts a file using AES encryption and writes the encrypted content to a new file.
+    ///     Encrypts a file using AES encryption and writes the result to another file.
     /// </summary>
-    /// <param name="inputFilePath"></param>
-    /// <param name="outputFilePath"></param>
-    /// <param name="key">Key for the encryption.</param>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="InvalidOperationException"></exception>
     internal static void EncryptFile(string inputFilePath, string outputFilePath, string key)
     {
         if (string.IsNullOrEmpty(inputFilePath) || !File.Exists(inputFilePath))
@@ -683,14 +642,8 @@ internal class Utils
     }
 
     /// <summary>
-    ///   Decrypts a file using AES encryption and returns the decrypted content as a byte array.
+    ///     Decrypts a file encrypted using AES encryption and reads the decrypted content into memory.
     /// </summary>
-    /// <param name="inputFilePath">The path to the encrypted file.</param>
-    /// <param name="key">Key used for decryption.</param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="InvalidOperationException"></exception>
     internal static byte[] DecryptFileToMemory(string inputFilePath, string key)
     {
         if (string.IsNullOrEmpty(inputFilePath) || !File.Exists(inputFilePath))
@@ -736,12 +689,7 @@ internal class Utils
             throw new InvalidOperationException("Decryption failed.", ex);
         }
     }
-    /// <summary>
-    ///    Shows a desktop alert with the specified caption and content text for a given duration.
-    /// </summary>
-    /// <param name="captionText">Text for the caption.</param>
-    /// <param name="contentText">Text for the content.</param>
-    /// <param name="time">Time in milliseconds to show the alert.</param>
+
     internal static void ShowAlert(string captionText, string contentText, int time)
     {
         var alert = new RadDesktopAlert
@@ -757,12 +705,7 @@ internal class Utils
         alert.Show();
     }
 
-    /// <summary>
-    ///    Loads a password-protected ZIP archive into memory and returns a dictionary of file names and memory streams.
-    /// </summary>
-    /// <param name="zipFilePath">Path to the ZIP archive file.</param>
-    /// <param name="password">Password used to decrypt the archive.</param>
-    /// <returns></returns>
+
     internal static Dictionary<string, MemoryStream> LoadPasswordProtectedZipIntoMemory(string zipFilePath,
         string password)
     {
