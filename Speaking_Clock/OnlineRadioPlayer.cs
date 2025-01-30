@@ -11,7 +11,12 @@ internal class OnlineRadioPlayer
 
     internal static PlaybackState _playbackState = PlaybackState.Stopped;
     private static float _volume = 0.5f; // Default volume (50%)
-
+    /// <summary>
+    /// Plays an MP3 stream from the given URL.
+    /// </summary>
+    /// <param name="url">Url of the stream to play</param>
+    /// <param name="_volume">Volume level (0.0 to 1.0)</param>
+    /// <returns></returns>
     internal static async Task PlayStreamAsync(string url, float _volume = 0.05f)
     {
         try
@@ -122,7 +127,9 @@ internal class OnlineRadioPlayer
             Debug.WriteLine("Playback paused.");
         }
     }
-
+    /// <summary>
+    /// Resumes playback if paused.
+    /// </summary>
     public static void Resume()
     {
         if (_playbackState == PlaybackState.Paused && WaveOut != null)
@@ -132,7 +139,9 @@ internal class OnlineRadioPlayer
             Debug.WriteLine("Playback resumed.");
         }
     }
-
+    /// <summary>
+    /// Stops playback and cleans up resources.
+    /// </summary>
     public static void Stop()
     {
         try
@@ -159,7 +168,10 @@ internal class OnlineRadioPlayer
             Debug.WriteLine($"Error stopping playback: {ex.Message}");
         }
     }
-
+    /// <summary>
+    /// Sets the volume level of the playback device.
+    /// </summary>
+    /// <param name="volume">Volume level (0.0 to 1.0)</param> 
     public static void SetVolume(float volume)
     {
         if (WaveOut != null && volume >= 0.00f && volume <= 1.0f)
@@ -173,7 +185,6 @@ internal class OnlineRadioPlayer
             Debug.WriteLine($"Invalid volume level: {volume}. Must be between 0.0 and 1.0.");
         }
     }
-
     internal enum PlaybackState
     {
         Stopped,
