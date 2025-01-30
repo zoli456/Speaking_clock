@@ -19,7 +19,10 @@ internal class SpeechRecognition
 
     private static readonly HWND HwndTopmost = new(new IntPtr(-1)); // Constant for making the window top-most
 
-    // Activate recording and recognition
+    /// <summary>
+    /// Activate the voice recognition system
+    /// </summary>
+    /// <param name="modelPath">The path to the Vosk model.</param>
     internal static void ActivateRecognition(string modelPath)
     {
         if (IsRunning) return;
@@ -65,7 +68,9 @@ internal class SpeechRecognition
         WaveIn.StartRecording();
     }
 
-    // Deactivate and clean up resources
+    /// <summary>
+    /// Deactivate the voice recognition system.
+    /// </summary>
     internal static void DeactivateRecognition()
     {
         if (IsRunning)
@@ -76,7 +81,10 @@ internal class SpeechRecognition
         _voskModel?.Dispose();
     }
 
-    // Process the recognition result and check for keywords
+    /// <summary>
+    /// Process the recognized result.
+    /// </summary>
+    /// <param name="result">The recognized word.</param>
     private static void ProcessResult(string result)
     {
         Debug.WriteLine(result);
@@ -142,7 +150,9 @@ internal class SpeechRecognition
             Beallitasok.SimulateRealKeyPress(
                 Utils.CharToHexKeyCode(Beallitasok.HangfelismerésSection["Eredmény_billentyű"].StringValue));
     }
-
+    /// <summary>
+    ///  Enable voice recognition.
+    /// </summary>
     internal static void EnableVoiceRecognition()
     {
         if (Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue && !IsRunning)
@@ -151,7 +161,9 @@ internal class SpeechRecognition
             WaveIn.StartRecording();
         }
     }
-
+    /// <summary>
+    /// Disable voice recognition.
+    /// </summary>
     internal static void DisableVoiceRecognition()
     {
         if (Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue && IsRunning)

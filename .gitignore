@@ -5,6 +5,7 @@
 
 #Secrets
 Secrets.cs
+credentials.json
 
 # User-specific files
 *.rsuser
