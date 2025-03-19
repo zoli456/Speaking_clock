@@ -30,6 +30,17 @@ public class CalendarWidget : RenderForm, IDisposable
     private Point dragOffset;
     private bool isDragging;
     private ID2D1SolidColorBrush textBrush;
+
+    private HashSet<DateTime> HighlightedDays = new();
+
+    internal DayOfWeek FirstDayOfWeek = DayOfWeek.Monday;
+    internal int CellSpacing = 50;
+    internal int CellHeight = 30;
+    internal int HeaderFontSize = 24;
+    internal int DayFontSize = 20;
+    internal int DayToNumberSpacing = -10;
+    internal int DayHeaderToTopSpacing = 50;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CalendarWidget"/> class.
     /// </summary>
@@ -130,16 +141,6 @@ public class CalendarWidget : RenderForm, IDisposable
         _timer.Start();
         Show();
     }
-
-    public HashSet<DateTime> HighlightedDays { get; private set; } = new();
-
-    public DayOfWeek FirstDayOfWeek { get; set; } = DayOfWeek.Monday;
-    public int CellSpacing { get; set; } = 50;
-    public int CellHeight { get; set; } = 30;
-    public int HeaderFontSize { get; set; } = 24;
-    public int DayFontSize { get; set; } = 20;
-    public int DayToNumberSpacing { get; set; } = -10;
-    public int DayHeaderToTopSpacing { get; set; } = 50;
 
     public new void Dispose()
     {

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows10.0.18362.0</TargetFramework>
+		<TargetFramework>net9.0-windows10.0.18362.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -10,7 +10,7 @@
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<Company>Zoli456 Software</Company>
 		<Description>Egy egyszerű beszélő óra Windows rendszerekre.</Description>
-		<Version>1.1.0.0</Version>
+		<Version>1.2.0.0</Version>
 		<AssemblyVersion>$(Version)</AssemblyVersion>
 		<FileVersion>$(Version)</FileVersion>
 		<LangVersion>latest</LangVersion>
@@ -61,24 +61,23 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
-		<PackageReference Include="NAudio" Version="2.2.1" />
-		<PackageReference Include="SharpCompress" Version="0.38.0" />
-		<PackageReference Include="sharpconfig" Version="3.2.9.1" />
-		<PackageReference Include="TaskScheduler" Version="2.11.0" />
-		<PackageReference Include="UI.for.WinForms.AllControls.Net70" Version="2023.2.718" />
-		<PackageReference Include="Vanara.PInvoke.Kernel32" Version="4.0.4" />
-		<PackageReference Include="Vanara.PInvoke.Shell32" Version="4.0.4" />
-		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.4" />
-		<PackageReference Include="Vortice.Direct2D1" Version="3.6.2" />
-		<PackageReference Include="Vortice.WinForms" Version="3.6.2" />
-		<PackageReference Include="Vortice.WinUI" Version="3.6.2" />
-		<PackageReference Include="Vosk" Version="0.3.38" />
+		<None Include="AudioProcessor.cs" />
+		<None Include="GmailMailChecker.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="AudioProcessor.cs" />
-		<None Include="GmailMailChecker.cs" />
+	  <PackageReference Include="HtmlAgilityPack" Version="1.12.0" />
+	  <PackageReference Include="NAudio" Version="2.2.1" />
+	  <PackageReference Include="SharpCompress" Version="0.39.0" />
+	  <PackageReference Include="sharpconfig" Version="3.2.9.1" />
+	  <PackageReference Include="TaskScheduler" Version="2.12.1" />
+	  <PackageReference Include="UI.for.WinForms.AllControls.Net90" Version="2024.4.1113" />
+	  <PackageReference Include="Vanara.PInvoke.Kernel32" Version="4.1.1" />
+	  <PackageReference Include="Vanara.PInvoke.Shell32" Version="4.1.1" />
+	  <PackageReference Include="Vanara.PInvoke.User32" Version="4.1.1" />
+	  <PackageReference Include="Vortice.Direct2D1" Version="3.6.2" />
+	  <PackageReference Include="Vortice.WinForms" Version="3.6.2" />
+	  <PackageReference Include="Vosk" Version="0.3.38" />
 	</ItemGroup>
 
 	<ItemGroup>

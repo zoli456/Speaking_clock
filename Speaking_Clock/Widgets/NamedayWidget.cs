@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Numerics;
 using System.Text.Json;
@@ -76,6 +77,7 @@ public class NamedayWidget : RenderForm
         Show();
     }
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public float ScaleFactor
     {
         get => _scale;

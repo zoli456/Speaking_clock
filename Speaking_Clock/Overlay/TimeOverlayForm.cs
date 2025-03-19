@@ -51,10 +51,7 @@ public class TimeOverlayForm : NativeWindow
         AssignHandle(hwnd);
 
         SetLayeredWindowAttributes(hwnd, 0, 255, (LayeredWindowAttributes)LWA_COLORKEY);
-
-        // Force overlay to topmost
-        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-            SetWindowPosFlags.SWP_NOMOVE | SetWindowPosFlags.SWP_NOSIZE);
+        
     }
 
 
@@ -92,6 +89,8 @@ public class TimeOverlayForm : NativeWindow
             if (FullScreenChecker.IsAppInFullScreen() && Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
             {
                 ShowOverlay();
+                SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0,
+                    SetWindowPosFlags.SWP_NOMOVE | SetWindowPosFlags.SWP_NOSIZE);
                 _renderTarget.BeginDraw();
                 _renderTarget.Clear(new Color4(0, 0, 0, 0)); // Transparent background
 

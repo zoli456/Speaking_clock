@@ -106,13 +106,11 @@ public static class NvidiaDriverFinder
             throw new Exception("Download button not found on the driver page.");
         }
 
-        // Get the href attribute from the button
         var downloadLink = downloadButton.GetAttributeValue("href", null);
 
         if (string.IsNullOrEmpty(downloadLink))
             throw new Exception("Download link not found in the button.");
 
-        // Ensure the link is absolute (modify this transformation based on the actual link structure)
         if (!Uri.IsWellFormedUriString(downloadLink, UriKind.Absolute))
         {
             downloadLink = downloadLink.Replace("&lang=us&type=GeForce", "")

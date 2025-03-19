@@ -79,7 +79,7 @@ public partial class Beallitasok : Form
     internal static string RadioDataKey = Secrets.RadioDataKey;
 
     internal static string UserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
 
     internal static NotifyIcon TrayIcon = new();
 
@@ -1126,12 +1126,9 @@ public partial class Beallitasok : Form
                     DisableCustomWarning();
                     SetWarningTime(warningTimes[index]);
                     Debug.WriteLine($"Set a notification in {warningTimes[index]} minutes.");
-                    // Cast the sender to ToolStripMenuItem
                     if (clickedItem != null && clickedItem.Owner != null)
-                        // Iterate through all the items in the same menu
                         foreach (ToolStripItem item in clickedItem.Owner.Items)
                             if (item is ToolStripMenuItem menuItem)
-                                // Check all items except the clicked one
                                 menuItem.Checked = menuItem == clickedItem;
                 }
                 else

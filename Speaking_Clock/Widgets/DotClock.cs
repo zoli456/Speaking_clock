@@ -86,29 +86,31 @@ public class DotMatrixClock : RenderForm
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
     }
 
-    public float DotSize
+    public float GetDotSize()
     {
-        get => _dotSize;
-        set
+        return _dotSize;
+    }
+
+    public void SetDotSize(float value)
+    {
+        if (value > 0)
         {
-            if (value > 0)
-            {
-                _dotSize = value;
-                Invalidate(); // Redraw the clock with the updated dot size
-            }
+            _dotSize = value;
+            Invalidate(); // Redraw the clock with the updated dot size
         }
     }
 
-    public float DotSpacing
+    public float GetDotSpacing()
     {
-        get => _dotSpacing;
-        set
+        return _dotSpacing;
+    }
+
+    public void SetDotSpacing(float value)
+    {
+        if (value > 0)
         {
-            if (value > 0)
-            {
-                _dotSpacing = value;
-                Invalidate(); // Redraw the clock with the updated dot spacing
-            }
+            _dotSpacing = value;
+            Invalidate(); // Redraw the clock with the updated dot spacing
         }
     }
 

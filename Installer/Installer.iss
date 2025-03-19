@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Beszélő óra"
-#define MyAppVersion "1.1"
+#define MyAppVersion "1.2"
 #define MyAppPublisher "Zoli456"
 #define MyAppExeName "Speaking_Clock.exe"
 ; requires netcorecheck.exe and netcorecheck_x64.exe (see CodeDependencies.iss)
@@ -47,51 +47,44 @@ Name: "hungarian"; MessagesFile: "compiler:Languages\Hungarian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\HtmlAgilityPack.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\libgcc_s_seh-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\libvosk.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Microsoft.Win32.TaskScheduler.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.Asio.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.Midi.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.Wasapi.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.WinForms.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\NAudio.WinMM.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\settings.ini"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\SharpCompress.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\SharpConfig.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Speaking_Clock.deps.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Speaking_Clock.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Speaking_Clock.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Speaking_Clock.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\System.ComponentModel.Composition.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\System.Management.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Telerik.WinControls.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Telerik.WinControls.UI.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\TelerikCommon.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vanara.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vanara.PInvoke.Gdi32.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vanara.PInvoke.Kernel32.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vanara.PInvoke.Shared.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vanara.PInvoke.User32.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vosk.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\ZstdSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\vosk-model-small-en-us-0.15\*"; DestDir: "{app}\vosk-model-small-en-us-0.15"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Fájlok\*"; DestDir: "{app}\Fájlok"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Hangok\*"; DestDir: "{app}\Hangok"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\runtimes\*"; DestDir: "{app}\runtimes"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\SharpGen.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\SharpGen.Runtime.COM.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vortice.WinForms.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vortice.Direct2D1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vortice.Mathematics.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\Release\net8.0-windows10.0.17763.0\Protected\Vortice.DirectX.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\vosk-model-small-en-us-0.15\*"; DestDir: "{app}\vosk-model-small-en-us-0.15"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Fájlok\*"; DestDir: "{app}\Fájlok"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Hangok\*"; DestDir: "{app}\Hangok"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\HtmlAgilityPack.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\libgcc_s_seh-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\libvosk.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Microsoft.Win32.TaskScheduler.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\NAudio.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\NAudio.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\NAudio.Wasapi.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\NAudio.WinForms.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\NAudio.WinMM.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\settings.ini"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\SharpCompress.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\SharpConfig.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\SharpGen.Runtime.COM.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\SharpGen.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Speaking_clock.deps.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Speaking_Clock.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Speaking_clock.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Speaking_clock.pdb"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Speaking_clock.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Telerik.WinControls.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Telerik.WinControls.UI.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\TelerikCommon.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vanara.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vanara.PInvoke.Gdi32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vanara.PInvoke.Kernel32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vanara.PInvoke.Shared.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vanara.PInvoke.User32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vortice.Direct2D1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vortice.WinForms.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\Vosk.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.18362.0\protected\ZstdSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
@@ -106,7 +99,7 @@ function InitializeSetup: Boolean;
 begin
 
 #ifdef Dependency_Path_NetCoreCheck
-  Dependency_AddDotNet80Desktop;
+  Dependency_AddDotNet90Desktop;
 #endif
   Result := True;
 end;

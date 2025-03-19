@@ -86,17 +86,18 @@ public class RadioPlayerWidget : RenderForm
         Show();
     }
 
-    public float ScaleFactor
+    public float GetScaleFactor()
     {
-        get => _scale;
-        set
+        return _scale;
+    }
+
+    public void SetScaleFactor(float value)
+    {
+        if (value > 0 && value != _scale)
         {
-            if (value > 0 && value != _scale)
-            {
-                _scale = value;
-                CreateRenderTarget();
-                Invalidate();
-            }
+            _scale = value;
+            CreateRenderTarget();
+            Invalidate();
         }
     }
 

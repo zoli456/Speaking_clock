@@ -68,17 +68,18 @@ public class AnalogClock : RenderForm
         Show();
     }
 
-    public float ScaleFactor
+    public float GetScaleFactor()
     {
-        get => _scale;
-        set
+        return _scale;
+    }
+
+    public void SetScaleFactor(float value)
+    {
+        if (value > 0 && value != _scale)
         {
-            if (value > 0 && value != _scale)
-            {
-                _scale = value;
-                CreateRenderTarget(); // Recreate render target for new size
-                Invalidate(); // Redraw with updated scale
-            }
+            _scale = value;
+            CreateRenderTarget(); // Recreate render target for new size
+            Invalidate(); // Redraw with updated scale
         }
     }
 
