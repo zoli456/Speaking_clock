@@ -62,7 +62,7 @@ internal class SpeechRecognition
                 if (!Bass.RecordInit())
                 {
                     Debug.WriteLine("RecordInit failed: " + Bass.LastError);
-                    return;
+                   // return;
                 }
 
             // Load or reload model and recognizer
@@ -117,7 +117,7 @@ internal class SpeechRecognition
             if (_recordingDevice != 0)
             {
                 Bass.ChannelPause(_recordingDevice);
-                Bass.RecordFree();
+                //Bass.RecordFree();
                 _voskModel?.Dispose();
                 _recognizer?.Dispose();
             }
