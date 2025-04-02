@@ -11,8 +11,9 @@ public class ScreenCapture
         PwClientonly = 0x00000001, // Only client area
         PwRenderfullcontent = 0x00000002 // Entire window content
     }
+
     /// <summary>
-    /// Captures the screen or active window and saves it to a file.
+    ///     Captures the screen or active window and saves it to a file.
     /// </summary>
     /// <param name="captureActiveWindow"></param>
     public static void CaptureScreen(bool captureActiveWindow)
@@ -71,8 +72,9 @@ public class ScreenCapture
         Gdi32.DeleteDC(hdcMemory);
         User32.ReleaseDC(IntPtr.Zero, hdcSrc);
     }
+
     /// <summary>
-    /// Saves the captured bitmap to a file.
+    ///     Saves the captured bitmap to a file.
     /// </summary>
     /// <param name="hBitmap"></param>
     /// <param name="filePath"></param>

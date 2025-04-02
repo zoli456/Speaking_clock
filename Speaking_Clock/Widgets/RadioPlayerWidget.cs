@@ -29,8 +29,9 @@ public class RadioPlayerWidget : RenderForm
     private ID2D1SolidColorBrush _textBrush;
     private float _volume = 0.05f; // Default volume: 5%
     private string currentRadioName, currentRadioURL;
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="RadioPlayerWidget"/> class.
+    ///     Initializes a new instance of the <see cref="RadioPlayerWidget" /> class.
     /// </summary>
     /// <param name="startX"></param>
     /// <param name="startY"></param>
@@ -86,6 +87,16 @@ public class RadioPlayerWidget : RenderForm
         Show();
     }
 
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+            return cp;
+        }
+    }
+
     public float GetScaleFactor()
     {
         return _scale;
@@ -98,16 +109,6 @@ public class RadioPlayerWidget : RenderForm
             _scale = value;
             CreateRenderTarget();
             Invalidate();
-        }
-    }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
         }
     }
 

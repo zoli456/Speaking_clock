@@ -19,11 +19,12 @@ using Vanara.PInvoke;
 namespace Speaking_Clock;
 
 internal class Utils
-{/// <summary>
-///    Converts a character or key name to a hex keycode.
-/// </summary>
-/// <param name="key">Input character or key name.</param>
-/// <returns></returns>
+{
+    /// <summary>
+    ///     Converts a character or key name to a hex keycode.
+    /// </summary>
+    /// <param name="key">Input character or key name.</param>
+    /// <returns></returns>
     internal static byte CharToHexKeyCode(string key)
     {
         var charToKeyCodeMap = new Dictionary<string, byte>
@@ -59,7 +60,7 @@ internal class Utils
     }
 
     /// <summary>
-    /// Converts a hex keycode to a character or key name.
+    ///     Converts a hex keycode to a character or key name.
     /// </summary>
     /// <param name="hexKeyCode">Keycode in hexadecimal format.</param>
     /// <returns></returns>
@@ -96,8 +97,9 @@ internal class Utils
 
         return "unknown key"; // Return "unknown key" if the key is not recognized
     }
+
     /// <summary>
-    /// Checks if a process with the specified name is playing audio.
+    ///     Checks if a process with the specified name is playing audio.
     /// </summary>
     /// <param name="processName">The name of the process to check.</param>
     /// <returns></returns>
@@ -129,8 +131,9 @@ internal class Utils
 
         return false; // Process is not playing audio
     }
+
     /// <summary>
-    /// Gets the default browser executable path from the registry.
+    ///     Gets the default browser executable path from the registry.
     /// </summary>
     /// <returns></returns>
     internal static string GetDefaultBrowser()
@@ -166,8 +169,9 @@ internal class Utils
 
         return browser;
     }
+
     /// <summary>
-    /// Gets the path to the user's Pictures directory and creates a Speaking_clock subdirectory.
+    ///     Gets the path to the user's Pictures directory and creates a Speaking_clock subdirectory.
     /// </summary>
     /// <returns></returns>
     internal static string GetOrCreateSpeakingClockPath()
@@ -188,8 +192,9 @@ internal class Utils
         // Combine the directory and filename
         return Path.Combine(speakingClockPath, fileName);
     }
+
     /// <summary>
-    /// Adds a watermark text to an image and returns the watermarked image.
+    ///     Adds a watermark text to an image and returns the watermarked image.
     /// </summary>
     /// <param name="image"></param>
     /// <param name="watermarkText"></param>
@@ -275,8 +280,9 @@ internal class Utils
     {
         return lista.OrderBy(s => s[0]).ToList();
     }
+
     /// <summary>
-    /// Downloads and installs the latest release of a GitHub repository using the GitHub API.
+    ///     Downloads and installs the latest release of a GitHub repository using the GitHub API.
     /// </summary>
     /// <param name="owner"></param>
     /// <param name="repo"></param>
@@ -319,8 +325,9 @@ internal class Utils
             Debug.WriteLine("Temporary file deleted.");
         }
     }
+
     /// <summary>
-    /// Downloads and installs the DirectX 9 runtime using a multi-threaded download method.
+    ///     Downloads and installs the DirectX 9 runtime using a multi-threaded download method.
     /// </summary>
     /// <returns></returns>
     internal static async Task DownloadAndInstallDirectX9()
@@ -366,8 +373,9 @@ internal class Utils
             Debug.WriteLine("Temporary file deleted.");
         }
     }
+
     /// <summary>
-    /// Downloads a file from the specified URL using multiple threads and saves it to the destination path.
+    ///     Downloads a file from the specified URL using multiple threads and saves it to the destination path.
     /// </summary>
     /// <param name="url">URL of the file to download.</param>
     /// <param name="destinationPath">Destination path to save the downloaded file.</param>
@@ -435,8 +443,9 @@ internal class Utils
 
         await Task.WhenAll(tasks);
     }
+
     /// <summary>
-    /// Runs a silent installer with the specified file path and arguments.
+    ///     Runs a silent installer with the specified file path and arguments.
     /// </summary>
     /// <param name="filePath"></param>
     /// <param name="arguments"></param>
@@ -462,8 +471,9 @@ internal class Utils
             MessageBox.Show($"Telepítés nem sikerült ezzel a kóddal: {process.ExitCode}.", "Hiba", MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
     }
+
     /// <summary>
-    /// Enables a Windows feature using the DISM command-line tool.
+    ///     Enables a Windows feature using the DISM command-line tool.
     /// </summary>
     /// <param name="featureName"></param>
     internal static void EnableWindowsFeature(string featureName)
@@ -502,8 +512,9 @@ internal class Utils
             Debug.WriteLine($"An error occurred: {ex.Message}");
         }
     }
+
     /// <summary>
-    /// Adds a folder to Windows Defender exclusions.
+    ///     Adds a folder to Windows Defender exclusions.
     /// </summary>
     internal static void AddFolderToDefenderExclusions()
     {
@@ -539,8 +550,9 @@ internal class Utils
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
     }
+
     /// <summary>
-    /// Executes a PowerShell command with the specified arguments.
+    ///     Executes a PowerShell command with the specified arguments.
     /// </summary>
     /// <param name="command"></param>
     private static void ExecutePowerShellCommand(string command)
@@ -572,8 +584,9 @@ internal class Utils
             Debug.WriteLine(output);
         }
     }
+
     /// <summary>
-    /// Extracts a password-protected ZIP archive to a specified folder.
+    ///     Extracts a password-protected ZIP archive to a specified folder.
     /// </summary>
     /// <param name="zipFilePath"></param>
     /// <param name="password"></param>
@@ -624,8 +637,9 @@ internal class Utils
             }
         }
     }
+
     /// <summary>
-    /// Encrypts a file using AES encryption and writes the encrypted content to a new file.
+    ///     Encrypts a file using AES encryption and writes the encrypted content to a new file.
     /// </summary>
     /// <param name="inputFilePath"></param>
     /// <param name="outputFilePath"></param>
@@ -683,7 +697,7 @@ internal class Utils
     }
 
     /// <summary>
-    ///   Decrypts a file using AES encryption and returns the decrypted content as a byte array.
+    ///     Decrypts a file using AES encryption and returns the decrypted content as a byte array.
     /// </summary>
     /// <param name="inputFilePath">The path to the encrypted file.</param>
     /// <param name="key">Key used for decryption.</param>
@@ -736,8 +750,9 @@ internal class Utils
             throw new InvalidOperationException("Decryption failed.", ex);
         }
     }
+
     /// <summary>
-    ///    Shows a desktop alert with the specified caption and content text for a given duration.
+    ///     Shows a desktop alert with the specified caption and content text for a given duration.
     /// </summary>
     /// <param name="captionText">Text for the caption.</param>
     /// <param name="contentText">Text for the content.</param>
@@ -758,7 +773,7 @@ internal class Utils
     }
 
     /// <summary>
-    ///    Loads a password-protected ZIP archive into memory and returns a dictionary of file names and memory streams.
+    ///     Loads a password-protected ZIP archive into memory and returns a dictionary of file names and memory streams.
     /// </summary>
     /// <param name="zipFilePath">Path to the ZIP archive file.</param>
     /// <param name="password">Password used to decrypt the archive.</param>

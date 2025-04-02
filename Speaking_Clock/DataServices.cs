@@ -1,8 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 using Speaking_clock;
 using Vanara.PInvoke;
 using HtmlDocument = HtmlAgilityPack.HtmlDocument;
@@ -16,8 +14,9 @@ public class DataServices
     private static readonly string ForcastApiUrl = "https://api.weatherapi.com/v1/forecast.json";
     private static readonly HttpClient HttpClient = new();
     private static readonly string TtsApiBaseUrl = "https://api.flowery.pw/v1/tts/";
+
     /// <summary>
-    /// Get the weather data from the WeatherAPI.com API.
+    ///     Get the weather data from the WeatherAPI.com API.
     /// </summary>
     /// <param name="location">The city or location to get the weather data for.</param>
     /// <param name="current">Get the current weather or a forecast.</param>
@@ -38,8 +37,9 @@ public class DataServices
             return $"Request error: {e.Message}";
         }
     }
+
     /// <summary>
-    /// Get the weather data from the Weather.com API.
+    ///     Get the weather data from the Weather.com API.
     /// </summary>
     /// <param name="cordinates">Cordinates of the location.</param>
     /// <returns></returns>
@@ -59,8 +59,9 @@ public class DataServices
             return $"Request error: {e.Message}";
         }
     }
+
     /// <summary>
-    /// Convert text to speech using the Flowery API.
+    ///     Convert text to speech using the Flowery API.
     /// </summary>
     /// <param name="text">The input text to convert to speech.</param>
     /// <returns></returns>
@@ -69,10 +70,8 @@ public class DataServices
         try
         {
             var audioData = await GetTtsFromApi(text);
-
             if (audioData != null && audioData.Length > 0)
                 return audioData;
-
             Debug.WriteLine("No audio data received from the TTS API.");
         }
         catch (Exception ex)
@@ -82,8 +81,9 @@ public class DataServices
 
         return null;
     }
+
     /// <summary>
-    /// Get the text-to-speech audio data from the Flowery API.
+    ///     Get the text-to-speech audio data from the Flowery API.
     /// </summary>
     /// <param name="text">The input text to convert to speech.</param>
     /// <returns></returns>
@@ -101,41 +101,9 @@ public class DataServices
             ? await response.Content.ReadAsByteArrayAsync()
             : null;
     }
+
     /// <summary>
-    /// Play the audio data using NAudio.
-    /// </summary>
-    /// <param name="audioData">A byte array containing the audio data to play.</param>
-    /// <param name="volumeMultiplier">Volume multiplier to adjust the playback volume.</param>
-    /// <returns></returns>
-    internal static async Task PlayStream(byte[] audioData, float volumeMultiplier)
-    {
-        while (Beallitasok.Lejátszás) await Task.Delay(100);
-
-        Beallitasok.Lejátszás = true;
-        SpeechRecognition.DisableVoiceRecognition();
-        Beallitasok.SafeInvoke(Beallitasok.SayItNowbutton,
-            () => Beallitasok.SayItNowbutton.Enabled = false);
-
-        using var ms = new MemoryStream(audioData);
-        using var waveStream = new Mp3FileReader(ms);
-        var pcmProvider = waveStream.ToSampleProvider();
-        var volumeProvider = new VolumeSampleProvider(pcmProvider) { Volume = volumeMultiplier };
-
-        using var outputDevice = new WaveOut();
-        if (!Beallitasok.PlayingRadio)
-            outputDevice.Volume = (float)((decimal)Beallitasok.BeszédSection["Hangerő"].IntValue / 100);
-        outputDevice.Init(volumeProvider);
-        outputDevice.Play();
-
-        while (outputDevice.PlaybackState == PlaybackState.Playing) await Task.Delay(100);
-
-        SpeechRecognition.EnableVoiceRecognition();
-        Beallitasok.SafeInvoke(Beallitasok.SayItNowbutton,
-            () => Beallitasok.SayItNowbutton.Enabled = true);
-        Beallitasok.Lejátszás = false;
-    }
-    /// <summary>
-    /// Get the namedays from the Nevnap API.
+    ///     Get the namedays from the Nevnap API.
     /// </summary>
     /// <returns></returns>
     public static async Task<string> GetNamedaysAsync()
@@ -151,8 +119,9 @@ public class DataServices
             return $"Request error: {e.Message}";
         }
     }
+
     /// <summary>
-    /// Get the location data from the IP address.
+    ///     Get the location data from the IP address.
     /// </summary>
     /// <returns></returns>
     public static async Task<string> GetLocationByIpAsync()
@@ -168,8 +137,9 @@ public class DataServices
             return $"Request error: {e.Message}";
         }
     }
+
     /// <summary>
-    /// Get the wallpaper image from the Bing API.
+    ///     Get the wallpaper image from the Bing API.
     /// </summary>
     /// <returns></returns>
     private static async Task<string> GetBingImageUrlAsync()
@@ -192,8 +162,9 @@ public class DataServices
             return null;
         }
     }
+
     /// <summary>
-    /// Download the Bing wallpaper image.
+    ///     Download the Bing wallpaper image.
     /// </summary>
     /// <param name="imageUrl">The URL of the image to download.</param>
     /// <returns></returns>
@@ -214,8 +185,9 @@ public class DataServices
             return null;
         }
     }
+
     /// <summary>
-    /// Set the wallpaper image.
+    ///     Set the wallpaper image.
     /// </summary>
     /// <param name="localFilePath">Local file path of the image to set as wallpaper.</param>
     private static void SetWallpaper(string localFilePath)
@@ -237,8 +209,9 @@ public class DataServices
             Debug.WriteLine("Error setting wallpaper: " + ex.Message);
         }
     }
+
     /// <summary>
-    /// Set the daily Bing wallpaper.
+    ///     Set the daily Bing wallpaper.
     /// </summary>
     /// <returns></returns>
     internal static async Task SetDailyWallpaperAsync()
@@ -292,10 +265,11 @@ public class DataServices
             Debug.WriteLine($"Failed to download file from {fileUrl}");
         }
     }
+
     /// <summary>
-    ///    Download the lastest link to the lastest Winrar.
+    ///     Download the lastest link to the lastest Winrar.
     /// </summary>
-    /// <param name="language">Language of the Winrar.</param> 
+    /// <param name="language">Language of the Winrar.</param>
     /// <returns></returns>
     internal static async Task<string> GetLatestWinRar64BitLinkAsync(string language)
     {
@@ -334,8 +308,9 @@ public class DataServices
             return $"Error retrieving WinRAR link: {ex.Message}";
         }
     }
+
     /// <summary>
-    /// Download and install the latest Winrar.
+    ///     Download and install the latest Winrar.
     /// </summary>
     /// <returns></returns>
     internal static async Task DownloadAndInstallWinrar()
@@ -362,8 +337,9 @@ public class DataServices
             Debug.WriteLine("Temporary file deleted.");
         }
     }
+
     /// <summary>
-    /// Get the latest 7-Zip 64-bit download link.
+    ///     Get the latest 7-Zip 64-bit download link.
     /// </summary>
     /// <returns></returns>
     internal static async Task<string> GetLatest7Zip64BitLinkAsync()
@@ -403,8 +379,9 @@ public class DataServices
             return $"Error retrieving 7-Zip link: {ex.Message}";
         }
     }
+
     /// <summary>
-    /// Download and install the latest 7-Zip.
+    ///     Download and install the latest 7-Zip.
     /// </summary>
     /// <returns></returns>
     internal static async Task DownloadAndInstall7Zip()
@@ -431,8 +408,9 @@ public class DataServices
             Debug.WriteLine("Temporary file deleted.");
         }
     }
+
     /// <summary>
-    /// Get the latest Nvidia driver download link for the specified GPU.
+    ///     Get the latest Nvidia driver download link for the specified GPU.
     /// </summary>
     /// <returns></returns>
     internal static async Task DownloadAndInstallNvidia()

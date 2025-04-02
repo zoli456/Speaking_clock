@@ -95,6 +95,7 @@ public partial class RadioControl : Form
     {
         SetFormAboveClock();
         Volumelabel.Text = $"{Beallitasok.RádióSection["Hangerő"].IntValue}%";
+        OnlineRadioPlayer.SetVolume((float)((decimal)RadiotrackBar.Value / 100));
     }
 
     //OnlineRadioPlayer.waveOut.Volume = (float) ((decimal) RadioVolumetrackBar.Value / 100)
@@ -110,7 +111,8 @@ public partial class RadioControl : Form
     {
         _trackbarScrolling = true;
         Volumelabel.Text = $"{RadiotrackBar.Value}%";
-        OnlineRadioPlayer.WaveOut.Volume = (float)((decimal)RadiotrackBar.Value / 100);
+        OnlineRadioPlayer.SetVolume((float)((decimal)RadiotrackBar.Value / 100));
+        // OnlineRadioPlayer.WaveOut.Volume = (float)((decimal)RadiotrackBar.Value / 100);
         Beallitasok.RadioVolume = (float)((decimal)RadiotrackBar.Value / 100);
         Beallitasok.RádióSection["Hangerő"].IntValue = RadiotrackBar.Value;
     }

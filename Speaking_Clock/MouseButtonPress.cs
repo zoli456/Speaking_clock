@@ -7,8 +7,9 @@ internal static class MouseButtonPress
 {
     private static SafeHHOOK _hookHandle;
     private static HookProc _mouseProc;
+
     /// <summary>
-    /// Activate the mouse hook.
+    ///     Activate the mouse hook.
     /// </summary>
     /// <exception cref="Win32Exception"></exception>
     internal static void ActivateMouseHook()

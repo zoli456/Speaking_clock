@@ -26,8 +26,9 @@ public class NamedayWidget : RenderForm
     private Point _mouseDownLocation;
     private ID2D1HwndRenderTarget _renderTarget;
     private float _scale = 1.0f; // Default scaling factor
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="NamedayWidget"/> class.
+    ///     Initializes a new instance of the <see cref="NamedayWidget" /> class.
     /// </summary>
     /// <param name="startX"></param>
     /// <param name="startY"></param>

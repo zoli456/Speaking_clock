@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
-using NAudio.Wave;
+using System.Runtime.InteropServices;
+using ManagedBass;
 using Vanara.PInvoke;
 using Vosk;
 
@@ -12,77 +13,155 @@ internal class SpeechRecognition
                                                           User32.SetWindowPosFlags.SWP_SHOWWINDOW;
 
     internal static bool IsRunning;
-    internal static WaveInEvent WaveIn;
+    private static int _recordingDevice;
     private static VoskRecognizer _recognizer;
     private static Model _voskModel;
     internal static string[] Temp;
 
-    private static readonly HWND HwndTopmost = new(new IntPtr(-1)); // Constant for making the window top-most
+    private static readonly HWND HwndTopmost = new(new IntPtr(-1));
 
-    /// <summary>
-    /// Activate the voice recognition system
-    /// </summary>
-    /// <param name="modelPath">The path to the Vosk model.</param>
+    // Callback for recording
+    private static bool RecordingCallback(int handle, IntPtr buffer, int length, IntPtr user)
+    {
+        if (!IsRunning || length <= 0 || _recognizer == null) return true;
+
+        try
+        {
+            var data = new byte[length];
+            Marshal.Copy(buffer, data, 0, length);
+
+            if (_recognizer.AcceptWaveform(data, length))
+            {
+                Temp = _recognizer.FinalResult().Split("\"");
+                if (Temp.Length > 3 && Temp[3].Length > 0)
+                    ProcessResult(Temp[3]);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Recording callback error: {ex.Message}");
+        }
+
+        return true;
+    }
+
     internal static void ActivateRecognition(string modelPath)
     {
         if (IsRunning) return;
 
-        if (!Directory.Exists(modelPath))
+        try
         {
-            Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue = false;
-            return;
-        }
-
-        _voskModel = new Model(modelPath);
-        _recognizer = new VoskRecognizer(_voskModel, 16000.0f);
-
-        IsRunning = true;
-
-        WaveIn = new WaveInEvent { WaveFormat = new WaveFormat(16000, 1) };
-
-        WaveIn.DataAvailable += (s, e) =>
-        {
-            if (!IsRunning) return;
-
-            if (Beallitasok.HangfelismerésSection["Zajszűrés"].BoolValue)
+            // Validate model path
+            if (!Directory.Exists(modelPath))
             {
-                /* if (_recognizer.AcceptWaveform(AudioProcessor.ApplyWienerFilter(e.Buffer, WaveIn.WaveFormat),
-                         e.BytesRecorded))
-                 {
-                     Temp = _recognizer.FinalResult().Split("\"");
-                     if (Temp[3].Length > 0)
-                         ProcessResult(Temp[3]);
-                 }*/
+                Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue = false;
+                Debug.WriteLine($"Model path not found: {modelPath}");
+                return;
+            }
+            if (!IsRecordingDeviceInitialized())
+                if (!Bass.RecordInit())
+                {
+                    Debug.WriteLine("RecordInit failed: " + Bass.LastError);
+                    return;
+                }
+
+            // Load or reload model and recognizer
+            _voskModel?.Dispose();
+            _voskModel = new Model(modelPath);
+
+            _recognizer?.Dispose();
+            _recognizer = new VoskRecognizer(_voskModel, 16000.0f);
+
+            // Start or restart recording
+            if (_recordingDevice == 0)
+            {
+                _recordingDevice = Bass.RecordStart(16000, 1, BassFlags.Default, 100, RecordingCallback, IntPtr.Zero);
+                if (_recordingDevice == 0)
+                {
+                    Debug.WriteLine("RecordStart failed: " + Bass.LastError);
+                    return;
+                }
             }
             else
             {
-                if (_recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded))
-                {
-                    Temp = _recognizer.FinalResult().Split("\"");
-                    if (Temp[3].Length > 0)
-                        ProcessResult(Temp[3]);
-                }
+                Bass.ChannelPlay(_recordingDevice);
             }
-        };
 
-        WaveIn.StartRecording();
+            IsRunning = true;
+            Debug.WriteLine("Recording started successfully");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ActivateRecognition error: {ex.Message}");
+            DeactivateRecognition();
+        }
     }
 
-    /// <summary>
-    /// Deactivate the voice recognition system.
-    /// </summary>
+    private static bool IsRecordingDeviceInitialized()
+    {
+        try
+        {
+            return Bass.RecordGetDeviceInfo(Bass.CurrentDevice, out var deviceInfo) &&
+                   deviceInfo.IsInitialized;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     internal static void DeactivateRecognition()
     {
-        if (IsRunning)
-            WaveIn?.StopRecording();
-        IsRunning = false;
-        WaveIn?.Dispose();
-        _recognizer?.Dispose();
-        _voskModel?.Dispose();
+        try
+        {
+            if (_recordingDevice != 0)
+            {
+                Bass.ChannelPause(_recordingDevice);
+                Bass.RecordFree();
+                _voskModel?.Dispose();
+                _recognizer?.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"DeactivateRecognition error: {ex.Message}");
+        }
+        finally
+        {
+            IsRunning = false;
+        }
+    }
+
+    // Add this for complete cleanup when closing application
+    internal static void FullCleanup()
+    {
+        try
+        {
+            if (_recordingDevice != 0)
+            {
+                Bass.ChannelStop(_recordingDevice);
+                _recordingDevice = 0;
+                Bass.RecordFree();
+            }
+
+            _recognizer?.Dispose();
+            _recognizer = null;
+
+            _voskModel?.Dispose();
+            _voskModel = null;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"FullCleanup error: {ex.Message}");
+        }
+        finally
+        {
+            IsRunning = false;
+        }
     }
 
     /// <summary>
-    /// Process the recognized result.
+    ///     Process the recognized result.
     /// </summary>
     /// <param name="result">The recognized word.</param>
     private static void ProcessResult(string result)
@@ -150,26 +229,45 @@ internal class SpeechRecognition
             Beallitasok.SimulateRealKeyPress(
                 Utils.CharToHexKeyCode(Beallitasok.HangfelismerésSection["Eredmény_billentyű"].StringValue));
     }
+
     /// <summary>
-    ///  Enable voice recognition.
+    ///     Enable voice recognition by unpausing the recording
     /// </summary>
     internal static void EnableVoiceRecognition()
     {
-        if (Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue && !IsRunning)
+        if (!Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue ||
+            _recordingDevice == 0 ||
+            IsRunning)
+            return;
+
+        try
         {
+            Bass.ChannelPlay(_recordingDevice); // Unpauses the channel
             IsRunning = true;
-            WaveIn.StartRecording();
+            Debug.WriteLine("Voice recognition unpaused");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error unpausing voice recognition: {ex.Message}");
         }
     }
+
     /// <summary>
-    /// Disable voice recognition.
+    ///     Disable voice recognition by pausing the recording
     /// </summary>
     internal static void DisableVoiceRecognition()
     {
-        if (Beallitasok.HangfelismerésSection["Bekapcsolva"].BoolValue && IsRunning)
+        if (_recordingDevice == 0 || !IsRunning) return;
+
+        try
         {
+            Bass.ChannelPause(_recordingDevice);
             IsRunning = false;
-            WaveIn.StopRecording();
+            Debug.WriteLine("Voice recognition paused");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error pausing voice recognition: {ex.Message}");
         }
     }
 }

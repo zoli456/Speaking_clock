@@ -23,8 +23,9 @@ public class AnalogClock : RenderForm
     private Point _mouseDownLocation;
     private ID2D1HwndRenderTarget _renderTarget;
     private float _scale = 1.0f; // Default scaling factor
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="AnalogClock"/> class.
+    ///     Initializes a new instance of the <see cref="AnalogClock" /> class.
     /// </summary>
     /// <param name="startX"></param>
     /// <param name="startY"></param>
@@ -68,6 +69,16 @@ public class AnalogClock : RenderForm
         Show();
     }
 
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+            return cp;
+        }
+    }
+
     public float GetScaleFactor()
     {
         return _scale;
@@ -80,16 +91,6 @@ public class AnalogClock : RenderForm
             _scale = value;
             CreateRenderTarget(); // Recreate render target for new size
             Invalidate(); // Redraw with updated scale
-        }
-    }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
         }
     }
 

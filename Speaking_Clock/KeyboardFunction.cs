@@ -68,7 +68,7 @@ internal class KeyboardFunction
                             {
                                 ScreenCapture.CaptureScreen(true);
                                 if (!Beallitasok.PlayingRadio)
-                                    Beallitasok.PlaySound("notification.mp3");
+                                    Beallitasok.PlaySound(Beallitasok.NotificationSound);
                             }
                         );
                     _fired2 = true;
@@ -81,7 +81,7 @@ internal class KeyboardFunction
                             {
                                 ScreenCapture.CaptureScreen(false);
                                 if (!Beallitasok.PlayingRadio)
-                                    Beallitasok.PlaySound("notification.mp3");
+                                    Beallitasok.PlaySound(Beallitasok.NotificationSound);
                             }
                         );
                     _fired2 = true;

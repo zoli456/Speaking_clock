@@ -23,8 +23,9 @@ public class DotMatrixClock : RenderForm
     private Point _mouseDownLocation;
     private ID2D1HwndRenderTarget _renderTarget;
     private bool _showColon = true;
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="DotMatrixClock"/> class.
+    ///     Initializes a new instance of the <see cref="DotMatrixClock" /> class.
     /// </summary>
     /// <param name="showSeconds"></param>
     /// <param name="startX"></param>
@@ -86,6 +87,17 @@ public class DotMatrixClock : RenderForm
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
     }
 
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            // Add layered style but avoid WS_EX_TRANSPARENT
+            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+            return cp;
+        }
+    }
+
     public float GetDotSize()
     {
         return _dotSize;
@@ -111,17 +123,6 @@ public class DotMatrixClock : RenderForm
         {
             _dotSpacing = value;
             Invalidate(); // Redraw the clock with the updated dot spacing
-        }
-    }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            // Add layered style but avoid WS_EX_TRANSPARENT
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
         }
     }
 

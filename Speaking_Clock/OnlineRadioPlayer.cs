@@ -1,191 +1,179 @@
 ﻿using System.Diagnostics;
-using NAudio.Wave;
+using ManagedBass;
+using ManagedBass.Mix;
 
 namespace Speaking_Clock;
 
 internal class OnlineRadioPlayer
 {
-    private static BufferedWaveProvider _bufferedWaveProvider;
-    internal static IWavePlayer WaveOut;
-    private static IMp3FrameDecompressor _decompressor;
+    private static int _streamHandle;
+    private static int _mixerHandle;
+    private static SyncProcedure _endSync;
+    private static readonly object _lock = new();
 
-    internal static PlaybackState _playbackState = PlaybackState.Stopped;
-    private static float _volume = 0.5f; // Default volume (50%)
-    /// <summary>
-    /// Plays an MP3 stream from the given URL.
-    /// </summary>
-    /// <param name="url">Url of the stream to play</param>
-    /// <param name="_volume">Volume level (0.0 to 1.0)</param>
-    /// <returns></returns>
-    internal static async Task PlayStreamAsync(string url, float _volume = 0.05f)
+    internal static RadioPlaybackState CurrentState { get; private set; } = RadioPlaybackState.Stopped;
+    internal static float Volume { get; private set; } = 0.5f;
+
+    internal static async Task PlayStreamAsync(string url, float volume = 0.05f)
     {
+        Debug.WriteLine($"{url} started playing");
+
         try
         {
-            if (_playbackState == PlaybackState.Paused && WaveOut != null)
+            if (CurrentState == RadioPlaybackState.Playing)
+                Stop();
+
+            lock (_lock)
             {
-                Resume();
-                return;
-            }
+                // Create stream without AutoFree to prevent premature disposal
+                _streamHandle = Bass.CreateStream(url, 0, BassFlags.Decode | BassFlags.StreamStatus, DownloadProc,
+                    IntPtr.Zero);
 
-            Stop(); // Ensure no existing resources are leaking
-
-            using (var httpClient = new HttpClient())
-            using (var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var mp3DataBuffer = new MemoryStream())
-            {
-                response.EnsureSuccessStatusCode();
-
-                WaveOut = new WaveOutEvent();
-                WaveOut.Volume = _volume; // Set initial volume
-                var buffer = new byte[65536]; // Buffer for incoming data
-                int bytesRead;
-
-                Mp3Frame frame = null;
-                BufferedWaveProvider waveProvider = null;
-
-                const int minBytesForFrame = 1000;
-
-                _playbackState = PlaybackState.Playing;
-
-                while (
-                    (bytesRead = await responseStream.ReadAsync(buffer, 0, buffer.Length)) > 0 &&
-                    _playbackState != PlaybackState.Stopped)
+                if (_streamHandle == 0)
                 {
-                    if (_playbackState == PlaybackState.Paused)
+                    Debug.WriteLine("BASS stream creation failed: " + Bass.LastError);
+                    TryAlternativeStreamMethod(url);
+                    if (_streamHandle == 0)
                     {
-                        await Task.Delay(100); // Wait while paused
-                        continue;
-                    }
-
-                    mp3DataBuffer.Write(buffer, 0, bytesRead);
-
-                    while (mp3DataBuffer.Length >= minBytesForFrame)
-                    {
-                        mp3DataBuffer.Position = 0;
-
-                        try
-                        {
-                            frame = Mp3Frame.LoadFromStream(mp3DataBuffer);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            break;
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Invalid MP3 frame: {ex.Message}, skipping...");
-                            break;
-                        }
-
-                        if (_decompressor == null)
-                        {
-                            var mp3WaveFormat = new Mp3WaveFormat(
-                                frame.SampleRate,
-                                frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
-                                frame.FrameLength,
-                                frame.BitRate);
-
-                            _decompressor = new AcmMp3FrameDecompressor(mp3WaveFormat);
-
-                            waveProvider = new BufferedWaveProvider(_decompressor.OutputFormat)
-                            {
-                                BufferDuration = TimeSpan.FromSeconds(20),
-                                DiscardOnBufferOverflow = true
-                            };
-
-                            WaveOut.Init(waveProvider);
-                            WaveOut.Play();
-                        }
-
-                        var decompressedBuffer = new byte[_decompressor.OutputFormat.AverageBytesPerSecond];
-                        var decompressedBytes = _decompressor.DecompressFrame(frame, decompressedBuffer, 0);
-                        waveProvider.AddSamples(decompressedBuffer, 0, decompressedBytes);
-
-                        var remainingData = mp3DataBuffer.Length - mp3DataBuffer.Position;
-                        var remainingBytes = new byte[remainingData];
-                        mp3DataBuffer.Read(remainingBytes, 0, remainingBytes.Length);
-                        mp3DataBuffer.SetLength(0);
-                        mp3DataBuffer.Write(remainingBytes, 0, remainingBytes.Length);
-                        mp3DataBuffer.Position = mp3DataBuffer.Length;
+                        Debug.WriteLine("All stream creation attempts failed.");
+                        return;
                     }
                 }
+
+                // Retrieve stream info to configure mixer accordingly
+                if (!Bass.ChannelGetInfo(_streamHandle, out var info))
+                {
+                    Debug.WriteLine("Failed to get stream info: " + Bass.LastError);
+                    Stop();
+                    return;
+                }
+
+                // Create mixer matching the stream's format
+                _mixerHandle = BassMix.CreateMixerStream(info.Frequency, info.Channels, BassFlags.Default);
+                if (_mixerHandle == 0)
+                {
+                    Debug.WriteLine("Mixer creation failed: " + Bass.LastError);
+                    Stop();
+                    return;
+                }
+
+                if (!BassMix.MixerAddChannel(_mixerHandle, _streamHandle, BassFlags.Default))
+                {
+                    Debug.WriteLine("Mixer error: " + Bass.LastError);
+                    Stop();
+                    return;
+                }
+
+                // Set sync for stream end
+                _endSync = (h, ch, data, user) => Stop();
+                Bass.ChannelSetSync(_mixerHandle, SyncFlags.End, 0, _endSync);
+
+                // Set volume and start playback
+                Volume = volume;
+                Bass.ChannelSetAttribute(_mixerHandle, ChannelAttribute.Volume, Volume);
+
+                if (Bass.ChannelPlay(_mixerHandle))
+                {
+                    CurrentState = RadioPlaybackState.Playing;
+                    Debug.WriteLine("Playback started successfully");
+                }
+                else
+                {
+                    Debug.WriteLine("Playback failed to start: " + Bass.LastError);
+                    Stop();
+                }
+            }
+
+            // Keep alive while playing
+            while (CurrentState != RadioPlaybackState.Stopped)
+            {
+                await Task.Delay(500);
+                if (CurrentState == RadioPlaybackState.Paused)
+                    await Task.Delay(1000);
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error playing stream: {ex.Message}");
+            Debug.WriteLine($"Play error: {ex.Message}");
+            Stop();
         }
+    }
+
+    private static void TryAlternativeStreamMethod(string url)
+    {
+        _streamHandle = Bass.CreateStream(url, 0, 0, DownloadProc, IntPtr.Zero);
+        if (_streamHandle != 0) return;
+
+        if (Environment.GetEnvironmentVariable("HTTP_PROXY") != null)
+            _streamHandle = Bass.CreateStream(url, 0, BassFlags.StreamStatus, DownloadProc, IntPtr.Zero);
+    }
+
+    private static void DownloadProc(IntPtr buffer, int length, IntPtr user)
+    {
     }
 
     public static void Pause()
     {
-        if (_playbackState == PlaybackState.Playing && WaveOut != null)
+        lock (_lock)
         {
-            WaveOut.Pause();
-            _playbackState = PlaybackState.Paused;
-            Debug.WriteLine("Playback paused.");
+            if (CurrentState != RadioPlaybackState.Playing || _mixerHandle == 0) return;
+            if (Bass.ChannelPause(_mixerHandle))
+            {
+                CurrentState = RadioPlaybackState.Paused;
+                Debug.WriteLine("Playback paused");
+            }
         }
     }
-    /// <summary>
-    /// Resumes playback if paused.
-    /// </summary>
+
     public static void Resume()
     {
-        if (_playbackState == PlaybackState.Paused && WaveOut != null)
+        lock (_lock)
         {
-            WaveOut.Play();
-            _playbackState = PlaybackState.Playing;
-            Debug.WriteLine("Playback resumed.");
+            if (CurrentState != RadioPlaybackState.Paused || _mixerHandle == 0) return;
+            if (Bass.ChannelPlay(_mixerHandle))
+            {
+                CurrentState = RadioPlaybackState.Playing;
+                Debug.WriteLine("Playback resumed");
+            }
         }
     }
-    /// <summary>
-    /// Stops playback and cleans up resources.
-    /// </summary>
+
     public static void Stop()
     {
-        try
+        lock (_lock)
         {
-            if (_playbackState == PlaybackState.Stopped)
-                return;
+            if (CurrentState == RadioPlaybackState.Stopped) return;
 
-            WaveOut?.Stop();
-            WaveOut?.Dispose();
-            WaveOut = null;
+            if (_mixerHandle != 0)
+            {
+                Bass.ChannelStop(_mixerHandle);
+                Bass.StreamFree(_mixerHandle);
+                _mixerHandle = 0;
+            }
 
-            _bufferedWaveProvider?.ClearBuffer();
-            _bufferedWaveProvider = null;
+            if (_streamHandle != 0)
+            {
+                Bass.StreamFree(_streamHandle);
+                _streamHandle = 0;
+            }
 
-            _decompressor?.Dispose();
-            _decompressor = null;
-
-            _playbackState = PlaybackState.Stopped;
-
-            Debug.WriteLine("Playback stopped and resources cleaned up successfully.");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error stopping playback: {ex.Message}");
+            CurrentState = RadioPlaybackState.Stopped;
+            Debug.WriteLine("Playback stopped");
         }
     }
-    /// <summary>
-    /// Sets the volume level of the playback device.
-    /// </summary>
-    /// <param name="volume">Volume level (0.0 to 1.0)</param> 
+
     public static void SetVolume(float volume)
     {
-        if (WaveOut != null && volume >= 0.00f && volume <= 1.0f)
+        lock (_lock)
         {
-            WaveOut.Volume = volume;
-            _volume = volume; // Save volume for future sessions
-            Debug.WriteLine($"Volume set to: {_volume * 100}%");
-        }
-        else
-        {
-            Debug.WriteLine($"Invalid volume level: {volume}. Must be between 0.0 and 1.0.");
+            Volume = Math.Clamp(volume, 0f, 1f);
+            if (_mixerHandle != 0)
+                Bass.ChannelSetAttribute(_mixerHandle, ChannelAttribute.Volume, Volume);
+            Debug.WriteLine($"Volume set to {Volume * 100}%");
         }
     }
-    internal enum PlaybackState
+
+    internal enum RadioPlaybackState
     {
         Stopped,
         Playing,

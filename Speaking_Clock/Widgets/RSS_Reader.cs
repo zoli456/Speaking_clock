@@ -63,8 +63,8 @@ internal class RSSReader : RenderForm
 
         Region = CreateRoundedRectangleRegion(windowWidth, windowHeight, 20);
 
-        toolTip.AutoPopDelay = 5000; 
-        toolTip.InitialDelay = 100; 
+        toolTip.AutoPopDelay = 5000;
+        toolTip.InitialDelay = 100;
         toolTip.ReshowDelay = 100;
         toolTip.ShowAlways = true;
 

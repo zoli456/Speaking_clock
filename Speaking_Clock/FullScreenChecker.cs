@@ -3,10 +3,11 @@
 namespace Speaking_Clock;
 
 internal class FullScreenChecker
-{/// <summary>
-/// Check if the active window is in fullscreen mode.
-/// </summary>
-/// <returns></returns>
+{
+    /// <summary>
+    ///     Check if the active window is in fullscreen mode.
+    /// </summary>
+    /// <returns></returns>
     internal static bool IsAppInFullScreen()
     {
         // Get the handle of the active window
@@ -49,7 +50,7 @@ internal class FullScreenChecker
     }
 
     /// <summary>
-    /// Check if the active window is in fullscreen or maximized mode.
+    ///     Check if the active window is in fullscreen or maximized mode.
     /// </summary>
     /// <returns></returns>
     internal static bool IsAppInFullScreenOrMaximized()

@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Management;
-using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
 namespace Speaking_Clock;
@@ -8,8 +7,9 @@ namespace Speaking_Clock;
 internal static class ComputerInfo
 {
     private static readonly List<string> Returnlist = new();
+
     /// <summary>
-    /// Get the name of the operating system and its version.
+    ///     Get the name of the operating system and its version.
     /// </summary>
     /// <returns></returns>
     internal static string WindowsNevEsVerzio()
@@ -43,8 +43,9 @@ internal static class ComputerInfo
             return $"Error retrieving Windows details: {ex.Message}";
         }
     }
+
     /// <summary>
-    /// Get the name of the processor.
+    ///     Get the name of the processor.
     /// </summary>
     /// <returns></returns>
     internal static string ProcesszorNev()
@@ -56,8 +57,9 @@ internal static class ComputerInfo
 
         return "Ismeretlen processzor";
     }
+
     /// <summary>
-    /// Get the amount of RAM installed in the system.
+    ///     Get the amount of RAM installed in the system.
     /// </summary>
     /// <returns></returns>
     internal static string RamMeret()
@@ -74,8 +76,9 @@ internal static class ComputerInfo
 
         return "Ismeretlen RAM méret";
     }
+
     /// <summary>
-    /// Get the name of the graphics card.
+    ///     Get the name of the graphics card.
     /// </summary>
     /// <returns></returns>
     internal static string VgaNev()
@@ -93,7 +96,7 @@ internal static class ComputerInfo
     }
 
     /// <summary>
-    /// Get the Windows activation status.
+    ///     Get the Windows activation status.
     /// </summary>
     /// <returns></returns>
     internal static string WindowsAktivaciosAllapot()
@@ -120,8 +123,9 @@ internal static class ComputerInfo
 
         return "Ismeretlen aktivációs állapot";
     }
+
     /// <summary>
-    /// Get the name of the motherboard.
+    ///     Get the name of the motherboard.
     /// </summary>
     /// <returns></returns>
     internal static string AlaplapNev()
@@ -138,8 +142,9 @@ internal static class ComputerInfo
 
         return "Ismeretlen alaplap";
     }
+
     /// <summary>
-    /// Get the list of running processes.
+    ///     Get the list of running processes.
     /// </summary>
     /// <returns></returns>
     internal static List<string> FutoFolyamatokListazasa()
@@ -158,8 +163,9 @@ internal static class ComputerInfo
 
         return Returnlist;
     }
+
     /// <summary>
-    /// Get the list of installed programs.
+    ///     Get the list of installed programs.
     /// </summary>
     /// <returns></returns>
     internal static string VgaDriverVerzio()
@@ -171,8 +177,9 @@ internal static class ComputerInfo
 
         return "Ismeretlen driver verzió";
     }
+
     /// <summary>
-    /// Get the list of installed programs.
+    ///     Get the list of installed programs.
     /// </summary>
     /// <returns></returns>
     internal static List<string> TelepitettProgramokListazasa()
@@ -193,8 +200,9 @@ internal static class ComputerInfo
 
         return Returnlist;
     }
+
     /// <summary>
-    /// Get the list of installed antivirus software.
+    ///     Get the list of installed antivirus software.
     /// </summary>
     /// <returns></returns>
     internal static List<string> VirusScannerNev()
@@ -215,8 +223,9 @@ internal static class ComputerInfo
 
         return Returnlist;
     }
+
     /// <summary>
-    /// Check if Secure Boot is enabled on the system.
+    ///     Check if Secure Boot is enabled on the system.
     /// </summary>
     /// <returns></returns>
     internal static string IsSecureBootEnabled()
@@ -241,8 +250,9 @@ internal static class ComputerInfo
 
         return "Hiba";
     }
+
     /// <summary>
-    /// Check if TPM is enabled on the system
+    ///     Check if TPM is enabled on the system
     /// </summary>
     /// <returns></returns>
     internal static string IsTpmEnabled()

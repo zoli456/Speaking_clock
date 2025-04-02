@@ -5,15 +5,17 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using ManagedBass;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
-using NAudio.Wave;
 using SharpConfig;
 using Speaking_clock;
 using Speaking_clock.Widgets;
 using Telerik.WinControls.UI;
 using Vanara.PInvoke;
+using Configuration = SharpConfig.Configuration;
 using MethodInvoker = System.Windows.Forms.MethodInvoker;
+using PlaybackState = ManagedBass.PlaybackState;
 using Task = System.Threading.Tasks.Task;
 using Timer = System.Windows.Forms.Timer;
 
@@ -114,6 +116,20 @@ public partial class Beallitasok : Form
             Close(); // Exit the application
         }
 
+        if (!Bass.Init())
+        {
+            Debug.WriteLine("BASS Init error: " + Bass.LastError);
+            if (!Bass.Init(-1, 44100, DeviceInitFlags.Default, IntPtr.Zero))
+                Debug.WriteLine("BASS Second init attempt failed: " + Bass.LastError);
+        }
+
+        /*Bass.PluginLoad("bassmix.dll");
+        Bass.PluginLoad("bassflac.dll");
+        Bass.PluginLoad("bass_aac.dll");*/
+        // Configure network settings for streaming
+        Bass.Configure(ManagedBass.Configuration.NetBufferLength, 1000); // 10 second buffer
+        Bass.Configure(ManagedBass.Configuration.NetPreBuffer, 0); // No pre-buffering
+
         if (!File.Exists(SetttingsFileName)) Close();
 
         TrayIcon.Icon = Icon;
@@ -189,29 +205,52 @@ public partial class Beallitasok : Form
     {
         base.SetVisibleCore(isVisibleCore);
     }
+
     /// <summary>
-    /// Play the current time
+    ///     Play the current time
     /// </summary>
     /// <returns></returns>
     internal static async Task Most_mod()
     {
+        var fileToPlay = "";
         while (Lejátszás) await Task.Delay(100);
-        if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
+        //if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
         SafeInvoke(SayItNowbutton, () => { SayItNowbutton.Enabled = false; });
         SpeechRecognition.DisableVoiceRecognition();
         if (DateTime.Now.Minute == 0)
         {
-            await PlaySound(string.Concat("teljes_óra/",
+            fileToPlay = string.Concat("teljes_óra/",
                 twentyfour_checkbox.Checked ? JelenlegiIdo.Hour : tizekkettoorasra_alakitas(JelenlegiIdo.Hour),
-                " óra van.mp3"));
+                " óra van.mp3");
+            if (!ZipContent.TryGetValue(fileToPlay, out TimefileStream))
+            {
+                SpeechRecognition.EnableVoiceRecognition();
+                return;
+            }
+
+            await PlaySound(TimefileStream);
         }
         else
         {
             SafeInvoke(SayItNowbutton, () => { SayItNowbutton.Enabled = false; });
-            await PlaySound(string.Concat("óra/",
+            fileToPlay = string.Concat("óra/",
                 twentyfour_checkbox.Checked ? JelenlegiIdo.Hour : tizekkettoorasra_alakitas(JelenlegiIdo.Hour),
-                " óra.mp3"));
-            await PlaySound($"perc/{JelenlegiIdo.Minute} perc van.mp3");
+                " óra.mp3");
+            if (!ZipContent.TryGetValue(fileToPlay, out TimefileStream))
+            {
+                SpeechRecognition.EnableVoiceRecognition();
+                return;
+            }
+
+            await PlaySound(TimefileStream);
+            fileToPlay = $"perc/{JelenlegiIdo.Minute} perc van.mp3";
+            if (!ZipContent.TryGetValue(fileToPlay, out TimefileStream))
+            {
+                SpeechRecognition.EnableVoiceRecognition();
+                return;
+            }
+
+            await PlaySound(TimefileStream);
         }
 
         SpeechRecognition.EnableVoiceRecognition();
@@ -239,69 +278,53 @@ public partial class Beallitasok : Form
 
         return hour;
     }
-    /// <summary>
-    /// Play a sound file
-    /// </summary>
-    /// <param name="file"></param>
-    /// <returns></returns>
-    internal static async Task<bool> PlaySound(string file)
+
+
+    internal static async Task<bool> PlaySound(MemoryStream streamtoPlayStream)
     {
         Lejátszás = true;
-        // Avoid creating new MemoryStream unless necessary
-        if (!file.Contains("/"))
+        try
         {
-            switch (file)
-            {
-                case "alarm.mp3":
-                    TimefileStream = AlarmSound;
-                    break;
-                case "notification.mp3":
-                    TimefileStream = NotificationSound;
-                    break;
-                default:
-                {
-                    Lejátszás = false;
-                    SpeechRecognition.EnableVoiceRecognition();
-                    return false; // Exit early if file is not recognized
-                }
-            }
-        }
-        else
-        {
-            if (ZipContent.ContainsKey(file))
-            {
-                TimefileStream = ZipContent[file];
-            }
-            else
-            {
-                Lejátszás = false;
-                SpeechRecognition.EnableVoiceRecognition();
-                return false; // Exit if file is not in zipContent
-            }
-        }
+            streamtoPlayStream.Position = 0;
 
-        TimefileStream.Position = 0;
-        // Play in background task
-        using (var rdr = new Mp3FileReader(TimefileStream))
-        using (var wavStream = WaveFormatConversionStream.CreatePcmStream(rdr))
-        using (var baStream = new BlockAlignReductionStream(wavStream))
-        using (var waveOut = new WaveOut(WaveCallbackInfo.FunctionCallback()))
-        {
-            waveOut.Init(baStream);
-            if (!PlayingRadio)
-                waveOut.Volume = (float)((decimal)BeszédSection["Hangerő"].IntValue / 100);
-            waveOut.Play();
-            // Wait for the playback to finish
-            while (waveOut.PlaybackState ==
-                   PlaybackState.Playing) await Task.Delay(100); // Reduce the polling frequency
+            byte[] audioData;
+            using (var ms = new MemoryStream())
+            {
+                await streamtoPlayStream.CopyToAsync(ms);
+                audioData = ms.ToArray();
+            }
 
-            // Cleanup after playback
-            waveOut.Stop();
-            waveOut.Dispose(); // Dispose stream and resources
+            var stream = Bass.CreateStream(audioData, 0, audioData.Length, BassFlags.Default);
+            if (stream == 0)
+            {
+                Console.WriteLine($"BASS Error creating stream: {Bass.LastError}");
+                return false;
+            }
+
+            var volume = (float)((decimal)BeszédSection["Hangerő"].IntValue / 100);
+            Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, volume);
+
+            if (!Bass.ChannelPlay(stream))
+            {
+                Console.WriteLine($"BASS Play failed: {Bass.LastError}");
+                Bass.StreamFree(stream);
+                return false;
+            }
+
+            while (Bass.ChannelIsActive(stream) == PlaybackState.Playing) await Task.Delay(50);
+            Bass.StreamFree(stream);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Playback error: {ex.Message}");
+            return false;
+        }
+        finally
+        {
             Lejátszás = false;
         }
-
-        return true;
     }
 
 
@@ -389,8 +412,9 @@ public partial class Beallitasok : Form
         else
             SpeechRecognition.DeactivateRecognition();
     }
+
     /// <summary>
-    /// Create or delete the task that starts the application on startup
+    ///     Create or delete the task that starts the application on startup
     /// </summary>
     private void CreateTask()
     {
@@ -414,8 +438,9 @@ public partial class Beallitasok : Form
                     ts.RootFolder.DeleteTask(Assembly.GetExecutingAssembly().GetName().Name);
             }
     }
+
     /// <summary>
-    /// Set the application to start on startup
+    ///     Set the application to start on startup
     /// </summary>
     private void SetStartup()
     {
@@ -478,7 +503,7 @@ public partial class Beallitasok : Form
                 {
                     WarningEnabled = false;
                     if (!PlayingRadio)
-                        PlaySound("alarm.mp3");
+                        PlaySound(AlarmSound);
                     if (!FullScreenChecker.IsAppInFullScreen())
                         Utils.ShowAlert("Figyelmeztetés!", "Egy előre beállított figyelmeztető lejárt.",
                             30);
@@ -499,7 +524,7 @@ public partial class Beallitasok : Form
             WarningEnabled = false;
             ResetWarnings();
             if (!PlayingRadio)
-                PlaySound("alarm.mp3");
+                PlaySound(AlarmSound);
             if (!FullScreenChecker.IsAppInFullScreen())
                 Utils.ShowAlert("Visszaszámlálás lejárt!", "Egy előre beállított figyelmeztető visszaszámlálás lejárt.",
                     30);
@@ -553,6 +578,7 @@ public partial class Beallitasok : Form
 
     private void button3_Click(object sender, EventArgs e)
     {
+        SpeechRecognition.FullCleanup();
         Application.Exit();
     }
 
@@ -569,8 +595,9 @@ public partial class Beallitasok : Form
     {
         hangok_kereses();
     }
+
     /// <summary>
-    /// Get the current time from an NTP server
+    ///     Get the current time from an NTP server
     /// </summary>
     /// <param name="ntpServer">The address of the NTP server.</param>
     /// <returns></returns>
@@ -632,7 +659,7 @@ public partial class Beallitasok : Form
     }
 
     /// <summary>
-    /// Change the system time
+    ///     Change the system time
     /// </summary>
     /// <param name="newDate"></param>
     /// <exception cref="Win32Exception"></exception>
@@ -722,11 +749,12 @@ public partial class Beallitasok : Form
 
     private void ExitButton_Click(object sender, EventArgs e)
     {
+        SpeechRecognition.FullCleanup();
         Application.Exit();
     }
 
     /// <summary>
-    /// Simulate a key press
+    ///     Simulate a key press
     /// </summary>
     /// <param name="keyCode"></param>
     internal static void SimulateRealKeyPress(byte keyCode)
@@ -742,13 +770,14 @@ public partial class Beallitasok : Form
         User32.keybd_event(keyCode, 0, User32.KEYEVENTF.KEYEVENTF_KEYUP,
             IntPtr.Zero); // Using IntPtr.Zero for the last argument
     }
+
     /// <summary>
-    /// Announce the current weather
+    ///     Announce the current weather
     /// </summary>
     /// <returns></returns>
     internal static async Task AnnounceWeather()
     {
-        if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
+        //  if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
 
         if (string.IsNullOrEmpty(Location))
             try
@@ -771,14 +800,15 @@ public partial class Beallitasok : Form
 
         if (_weatherSound != null && _nextWeatherCheck >= DateTime.Now)
         {
-            DataServices.PlayStream(_weatherSound, 1.3f);
+            //DataServices.PlayStream(_weatherSound, 1.3f);
+            PlaySound(new MemoryStream(_weatherSound));
             return;
         }
 
         if (_nextWeatherCheck < DateTime.Now)
             try
             {
-                var weatherJson = await DataServices.GetWeatherdotComAsync(Cordinates,Secrets.WeatherdotcomApiKey);
+                var weatherJson = await DataServices.GetWeatherdotComAsync(Cordinates, Secrets.WeatherdotcomApiKey);
                 _weatherData = JsonDocument.Parse(weatherJson);
             }
             catch (Exception ex)
@@ -807,15 +837,17 @@ public partial class Beallitasok : Form
             return;
         }
 
-        DataServices.PlayStream(_weatherSound, 1.3f);
+        //DataServices.PlayStream(_weatherSound, 1.3f);
+        PlaySound(new MemoryStream(_weatherSound));
     }
+
     /// <summary>
-    /// Announce the forecast for the next day
+    ///     Announce the forecast for the next day
     /// </summary>
     /// <returns></returns>
     internal static async Task AnnounceForecast()
     {
-        if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
+        //if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
 
         if (string.IsNullOrEmpty(Location))
             try
@@ -838,7 +870,8 @@ public partial class Beallitasok : Form
 
         if (_forecastSound != null && _nextWeatherCheck >= DateTime.Now)
         {
-            DataServices.PlayStream(_forecastSound, 1.3f);
+            //DataServices.PlayStream(_forecastSound, 1.3f);
+            PlaySound(new MemoryStream(_forecastSound));
             return;
         }
 
@@ -888,16 +921,17 @@ public partial class Beallitasok : Form
             return;
         }
 
-        DataServices.PlayStream(_forecastSound, 1.3f);
+        // DataServices.PlayStream(_forecastSound, 1.3f);
+        PlaySound(new MemoryStream(_forecastSound));
     }
 
     /// <summary>
-    /// Announce the name days of the day
+    ///     Announce the name days of the day
     /// </summary>
     /// <returns></returns>
     internal static async Task AnnounceNameDay()
     {
-        if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
+        //  if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
         try
         {
             if (string.IsNullOrEmpty(NameDays) || _namedaySound == null || LastNamedayIndex != DateTime.Now.Day)
@@ -928,7 +962,8 @@ public partial class Beallitasok : Form
 
                 try
                 {
-                    DataServices.PlayStream(_namedaySound, 1.3f);
+                    //DataServices.PlayStream(_namedaySound, 1.3f);
+                    PlaySound(new MemoryStream(_namedaySound));
                 }
                 catch (Exception ex)
                 {
@@ -942,7 +977,8 @@ public partial class Beallitasok : Form
 
                 try
                 {
-                    DataServices.PlayStream(_namedaySound, 1.3f);
+                    //DataServices.PlayStream(_namedaySound, 1.3f);
+                    PlaySound(new MemoryStream(_namedaySound));
                 }
                 catch (Exception ex)
                 {
@@ -987,7 +1023,7 @@ public partial class Beallitasok : Form
     }
 
     /// <summary>
-    /// Start playing a radio station
+    ///     Start playing a radio station
     /// </summary>
     /// <param name="url"></param>
     /// <param name="randioName"></param>
@@ -1053,8 +1089,9 @@ public partial class Beallitasok : Form
         /* if (!FullScreenChecker.IsAppInFullScreen())
              GmailMailChecker.CheckForUnreadEmailsAsync(GmailSection["Utolsó_ellenőrzés"].DateTimeValue);*/
     }
+
     /// <summary>
-    /// Reset the buttons for the custom warnings
+    ///     Reset the buttons for the custom warnings
     /// </summary>
     internal static void ResetCustomButtons()
     {
@@ -1066,8 +1103,9 @@ public partial class Beallitasok : Form
             if (item is RadMenuItem menuItem)
                 menuItem.IsChecked = false; // Uncheck the item
     }
+
     /// <summary>
-    /// Initalize the application after a small delay
+    ///     Initalize the application after a small delay
     /// </summary>
     private static void PostLauchSetup()
     {

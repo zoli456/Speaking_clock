@@ -26,23 +26,23 @@ public class CalendarWidget : RenderForm, IDisposable
     private readonly ID2D1SolidColorBrush sundayBrush;
     private readonly IDWriteTextFormat textFormat;
     private readonly IDWriteFactory writeFactory;
+    internal int CellHeight = 30;
+    internal int CellSpacing = 50;
+    internal int DayFontSize = 20;
+    internal int DayHeaderToTopSpacing = 50;
+    internal int DayToNumberSpacing = -10;
     private DateTime displayDate;
     private Point dragOffset;
+
+    internal DayOfWeek FirstDayOfWeek = DayOfWeek.Monday;
+    internal int HeaderFontSize = 24;
+
+    private HashSet<DateTime> HighlightedDays = new();
     private bool isDragging;
     private ID2D1SolidColorBrush textBrush;
 
-    private HashSet<DateTime> HighlightedDays = new();
-
-    internal DayOfWeek FirstDayOfWeek = DayOfWeek.Monday;
-    internal int CellSpacing = 50;
-    internal int CellHeight = 30;
-    internal int HeaderFontSize = 24;
-    internal int DayFontSize = 20;
-    internal int DayToNumberSpacing = -10;
-    internal int DayHeaderToTopSpacing = 50;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="CalendarWidget"/> class.
+    ///     Initializes a new instance of the <see cref="CalendarWidget" /> class.
     /// </summary>
     /// <param name="startX"></param>
     /// <param name="startY"></param>
@@ -283,8 +283,9 @@ public class CalendarWidget : RenderForm, IDisposable
             );
         }
     }
+
     /// <summary>
-    /// Calculate the date of Easter Sunday for a given year.
+    ///     Calculate the date of Easter Sunday for a given year.
     /// </summary>
     /// <param name="year">The year to calculate Easter Sunday for.</param>
     /// <returns></returns>

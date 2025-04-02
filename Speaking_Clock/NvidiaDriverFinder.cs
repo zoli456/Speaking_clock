@@ -10,8 +10,9 @@ public static class NvidiaDriverFinder
     private static readonly string LookupUrl = "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=3";
     private static readonly string DriverBaseUrl = "https://www.nvidia.com/Download/processDriver.aspx";
     private static readonly HttpClient HttpClient = new();
+
     /// <summary>
-    /// Get the latest NVIDIA driver download link for the specified GPU and driver type.
+    ///     Get the latest NVIDIA driver download link for the specified GPU and driver type.
     /// </summary>
     /// <param name="gpuName"></param>
     /// <param name="driver"></param>
@@ -40,8 +41,9 @@ public static class NvidiaDriverFinder
         //return await ParseDriverNvidiaParseDriverDownloadLink($"https://www.nvidia.com/Download/{driverPage}");
         return $"https://www.nvidia.com/Download/{driverPage}";
     }
+
     /// <summary>
-    /// Get the GPU entry for the specified GPU name.
+    ///     Get the GPU entry for the specified GPU name.
     /// </summary>
     /// <param name="gpuName"></param>
     /// <returns></returns>
@@ -80,7 +82,7 @@ public static class NvidiaDriverFinder
     }
 
     /// <summary>
-    /// Parse the NVIDIA driver page to extract the download link.
+    ///     Parse the NVIDIA driver page to extract the download link.
     /// </summary>
     /// <param name="pageContent"></param>
     /// <returns></returns>
