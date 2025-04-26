@@ -1,96 +1,90 @@
-﻿using Vanara.PInvoke;
+﻿using System.Runtime.InteropServices;
+using Vanara.PInvoke;
 
-namespace Speaking_Clock;
-
-internal class FullScreenChecker
+namespace Speaking_Clock
 {
-    /// <summary>
-    ///     Check if the active window is in fullscreen mode.
-    /// </summary>
-    /// <returns></returns>
-    internal static bool IsAppInFullScreen()
+    internal static class FullScreenChecker
     {
-        // Get the handle of the active window
-        var hWnd = User32.GetForegroundWindow();
-        if (hWnd == IntPtr.Zero || !User32.IsWindowVisible(hWnd)) return false;
+        internal static bool IsForegroundWindowFullScreenOrMaximized()
+        {
+            var hWnd = User32.GetForegroundWindow();
+            if (hWnd == HWND.NULL)
+            {
+                return false;
+            }
 
-        // Exclude windows without titles
-        if (User32.GetWindowTextLength(hWnd) == 0) return false;
+            var windowInfo = new User32.WINDOWINFO();
+            windowInfo.cbSize = (uint)Marshal.SizeOf(windowInfo); // Set size
+            if (!User32.GetWindowInfo(hWnd, ref windowInfo))
+            {
+                return false;
+            }
 
-        // Check if the window is minimized
-        if (User32.IsIconic(hWnd)) return false;
+            // Basic visibility checks
+            if (!windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_VISIBLE) ||
+                windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_MINIMIZE))
+            {
+                return false;
+            }
 
-        // Get window style and extended style
-        var style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_STYLE);
-        var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+            // Check for maximized state first
+            if (windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_MAXIMIZE)) // Or use User32.IsZoomed(hWnd)
+            {
+                return true;
+            }
 
-        // Get window dimensions
-        if (!User32.GetWindowRect(hWnd, out var windowRect)) return false;
+            // If not maximized, check for fullscreen state
+            var hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
+            if (hMonitor == HMONITOR.NULL)
+            {
+                return false;
+            }
 
-        // Determine the monitor the window is on
-        var screen = Screen.AllScreens.FirstOrDefault(s => s.Bounds.IntersectsWith(new Rectangle(
-            windowRect.left, windowRect.top,
-            windowRect.right - windowRect.left, windowRect.bottom - windowRect.top
-        )));
-        if (screen == null || (!screen.Primary && !screen.DeviceName.Contains("DISPLAY"))) return false;
+            var monitorInfo = new User32.MONITORINFO();
+            monitorInfo.cbSize = (uint)Marshal.SizeOf(monitorInfo); // Set size
+            if (!User32.GetMonitorInfo(hMonitor, ref monitorInfo))
+            {
+                return false;
+            }
 
-        // Check if the window covers the entire monitor area
-        var isFullScreen = windowRect.left <= screen.Bounds.Left && windowRect.top <= screen.Bounds.Top &&
-                           windowRect.right >= screen.Bounds.Right && windowRect.bottom >= screen.Bounds.Bottom;
+            // Compare window bounds with monitor bounds for fullscreen
+            return windowInfo.rcWindow == monitorInfo.rcMonitor;
+        }
 
-        // Check if the window is borderless or uses overlapping style
-        var isBorderless =
-            (style & unchecked((int)User32.WindowStyles.WS_POPUP)) == unchecked((int)User32.WindowStyles.WS_POPUP) ||
-            (style & unchecked((int)User32.WindowStyles.WS_OVERLAPPEDWINDOW)) !=
-            unchecked((int)User32.WindowStyles.WS_OVERLAPPEDWINDOW);
-        var isTopmost = (exStyle & (uint)User32.WindowStylesEx.WS_EX_TOPMOST) != 0;
+        internal static bool IsForegroundWindowFullScreen()
+        {
+            var hWnd = User32.GetForegroundWindow();
+            if (hWnd == HWND.NULL) return false;
 
-        // Consider the window fullscreen if it covers the entire screen, is borderless, and is possibly topmost
-        return isFullScreen && (isBorderless || isTopmost);
-    }
+            var windowInfo = new User32.WINDOWINFO(); // Create
+            windowInfo.cbSize = (uint)Marshal.SizeOf(windowInfo); // Set size
+            if (!User32.GetWindowInfo(hWnd, ref windowInfo)) return false;
 
-    /// <summary>
-    ///     Check if the active window is in fullscreen or maximized mode.
-    /// </summary>
-    /// <returns></returns>
-    internal static bool IsAppInFullScreenOrMaximized()
-    {
-        // Get the handle of the active window
-        var hWnd = User32.GetForegroundWindow();
-        if (hWnd == IntPtr.Zero) return false;
+            if (!windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_VISIBLE) ||
+                windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_MINIMIZE)) return false;
 
-        // Check if the window is minimized
-        if (User32.IsIconic(hWnd))
-            return false;
+            var hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
+            if (hMonitor == HMONITOR.NULL) return false;
 
-        // Get window style and extended style
-        var style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_STYLE);
-        var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+            var monitorInfo = new User32.MONITORINFO(); // Create
+            monitorInfo.cbSize = (uint)Marshal.SizeOf(monitorInfo); // Set size
+            if (!User32.GetMonitorInfo(hMonitor, ref monitorInfo)) return false;
 
-        // Get window dimensions
-        if (!User32.GetWindowRect(hWnd, out var windowRect))
-            return false;
+            return windowInfo.rcWindow == monitorInfo.rcMonitor;
+        }
+        /// <summary>
+        /// Checks if the foreground window is maximized (but not necessarily fullscreen).
+        /// </summary>
+        /// <returns>True if the foreground window is maximized, false otherwise.</returns>
+        internal static bool IsForegroundWindowMaximized()
+        {
+            var hWnd = User32.GetForegroundWindow();
+            if (hWnd == HWND.NULL)
+            {
+                return false;
+            }
+            return User32.IsZoomed(hWnd);
+        }
 
-        // Determine the monitor the window is on
-        var screen = Screen.AllScreens.FirstOrDefault(s => s.Bounds.IntersectsWith(new Rectangle(windowRect.left,
-            windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top)));
-        if (screen == null) return false;
-
-        // Check if the window covers the entire monitor area
-        var isFullScreen = windowRect.left <= screen.Bounds.Left && windowRect.top <= screen.Bounds.Top &&
-                           windowRect.right >= screen.Bounds.Right && windowRect.bottom >= screen.Bounds.Bottom;
-
-        // Check if the window is borderless or uses overlapping style
-        var isBorderless =
-            (style & unchecked((int)User32.WindowStyles.WS_POPUP)) == unchecked((int)User32.WindowStyles.WS_POPUP) ||
-            (style & unchecked((int)User32.WindowStyles.WS_OVERLAPPEDWINDOW)) !=
-            unchecked((int)User32.WindowStyles.WS_OVERLAPPEDWINDOW);
-        var isTopmost = (exStyle & (uint)User32.WindowStylesEx.WS_EX_TOPMOST) != 0;
-
-        // Check if the window is maximized
-        var isMaximized = (style & (int)User32.WindowStyles.WS_MAXIMIZE) != 0;
-
-        // Return true if the window is either fullscreen or maximized
-        return (isFullScreen && (isBorderless || isTopmost)) || isMaximized;
     }
 }

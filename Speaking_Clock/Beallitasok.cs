@@ -103,6 +103,7 @@ public partial class Beallitasok : Form
     private Mutex mutex;
     internal Nevjegy? Nevjegy;
     internal SystemInformation? SystemInformation;
+    internal static bool FullScreenApplicationRunning;
 
     public Beallitasok()
     {
@@ -127,16 +128,16 @@ public partial class Beallitasok : Form
         Bass.PluginLoad("bassflac.dll");
         Bass.PluginLoad("bass_aac.dll");*/
         // Configure network settings for streaming
-        Bass.Configure(ManagedBass.Configuration.NetBufferLength, 1000); // 10 second buffer
+        Bass.Configure(ManagedBass.Configuration.NetBufferLength, 1000); // 1 second buffer
         Bass.Configure(ManagedBass.Configuration.NetPreBuffer, 0); // No pre-buffering
 
         if (!File.Exists(SetttingsFileName)) Close();
 
         TrayIcon.Icon = Icon;
         JelenlegiIdo = DateTime.Now;
-/*#if RELEASE
-        TopMost = true;
-#endif*/
+        /*#if RELEASE
+                TopMost = true;
+        #endif*/
         AnnounceTimeCheckBox.Checked = BeszédSection["Bekapcsolva"].BoolValue;
         voiceRecognitionCheckbox.Checked = BeszédSection["Bekapcsolva"].BoolValue;
         startup_checkbox.Checked = IndításSection["Automatikus"].BoolValue;
@@ -472,6 +473,7 @@ public partial class Beallitasok : Form
     private void szamlalo_Tick(object sender, EventArgs e)
     {
         JelenlegiIdo = DateTime.Now;
+        FullScreenApplicationRunning = FullScreenChecker.IsForegroundWindowFullScreen();
         if (HangfelismerésSection["Bekapcsolva"].BoolValue && DefaultBrowerPath != "")
             if (DefaultBrowserPlayingAudio !=
                 Utils.IsProcessPlayingAudio(
@@ -485,9 +487,7 @@ public partial class Beallitasok : Form
                     SpeechRecognition.EnableVoiceRecognition();
             }
 
-        // Helper to reset all warnings
-        // Handle Custom Warning
-        /*if (FullScreenChecker.IsAppInFullScreenOrMaximized())
+        /*if (FullScreenChecker.IsForegroundWindowFullScreen())
         {
             Debug.WriteLine("Maximalizálva!");
         }*/
@@ -504,7 +504,7 @@ public partial class Beallitasok : Form
                     WarningEnabled = false;
                     if (!PlayingRadio)
                         PlaySound(AlarmSound);
-                    if (!FullScreenChecker.IsAppInFullScreen())
+                    if (!FullScreenApplicationRunning)
                         Utils.ShowAlert("Figyelmeztetés!", "Egy előre beállított figyelmeztető lejárt.",
                             30);
 
@@ -525,14 +525,13 @@ public partial class Beallitasok : Form
             ResetWarnings();
             if (!PlayingRadio)
                 PlaySound(AlarmSound);
-            if (!FullScreenChecker.IsAppInFullScreen())
+            if (!FullScreenApplicationRunning)
                 Utils.ShowAlert("Visszaszámlálás lejárt!", "Egy előre beállított figyelmeztető visszaszámlálás lejárt.",
                     30);
 
             return;
         }
 
-        // Handle "stick to whole" logic
         var shouldAnnounce = BeszédSection["Igazítás"].BoolValue
             ? JelenlegiIdo.Minute % BeszédSection["Gyakoriság"].IntValue == 0
             : JelenlegiIdo.Hour == KovetkezoBeszed.Hour && JelenlegiIdo.Minute == KovetkezoBeszed.Minute;

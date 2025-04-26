@@ -131,7 +131,7 @@ public class OverlayForm : Form
 
     private void Updatetimer_Tick(object sender, EventArgs e)
     {
-        if (FullScreenChecker.IsAppInFullScreen())
+        if (Beallitasok.FullScreenApplicationRunning)
         {
             //BlockMiddleClick.DeactivateHook();
             if (Beallitasok.GyorsmenüSection["Bekapcsolva"].BoolValue)

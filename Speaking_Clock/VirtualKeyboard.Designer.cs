@@ -31,9 +31,9 @@
             radCheckBox1 = new Telerik.WinControls.UI.RadCheckBox();
             radVirtualKeyboard1 = new Telerik.WinControls.UI.RadVirtualKeyboard();
             ((System.ComponentModel.ISupportInitialize)radCheckBox1).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)this).BeginInit();
             ((System.ComponentModel.ISupportInitialize)radVirtualKeyboard1).BeginInit();
             radVirtualKeyboard1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)this).BeginInit();
             SuspendLayout();
             // 
             // radCheckBox1
@@ -44,13 +44,6 @@
             radCheckBox1.TabIndex = 0;
             radCheckBox1.Text = "Szürke mód";
             radCheckBox1.ToggleStateChanged += radCheckBox1_ToggleStateChanged;
-            // 
-            // VirtualKeyboard
-            // 
-            AutoScaleBaseSize = new Size(7, 15);
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 337);
             // 
             // radVirtualKeyboard1
             // 
@@ -63,6 +56,13 @@
             radVirtualKeyboard1.TabIndex = 0;
             radVirtualKeyboard1.TabStop = false;
             ((Telerik.WinControls.UI.RadVirtualKeyboardElement)radVirtualKeyboard1.GetChildAt(0)).Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            // 
+            // VirtualKeyboard
+            // 
+            AutoScaleBaseSize = new Size(7, 15);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(807, 348);
             Controls.Add(radVirtualKeyboard1);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             MaximizeBox = false;

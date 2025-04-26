@@ -126,20 +126,29 @@ public class CalendarWidget : RenderForm, IDisposable
             new(currentyear, 12, 26)
         });
 
-        // Set up a timer for updating clock
-        _timer = new Timer { Interval = 60000 };
+        _timer = new Timer();
         _timer.Tick += (s, e) =>
         {
-            if (LastNamedayIndex != DateTime.Now.Day)
-            {
-                displayDate = DateTime.Now;
-                Invalidate();
-            }
+            // Update the displayed date to today
+            displayDate = DateTime.Now;
+            Invalidate();
 
-            ;
+            // Recalculate timer interval for next midnight
+            UpdateTimerInterval();
         };
+        UpdateTimerInterval(); // Set the first interval
         _timer.Start();
+
         Show();
+    }
+
+    private void UpdateTimerInterval()
+    {
+        var now = DateTime.Now;
+        var nextMidnight = now.Date.AddDays(1);
+        var timeUntilMidnight = nextMidnight - now;
+
+        _timer.Interval = (int)timeUntilMidnight.TotalMilliseconds;
     }
 
     public new void Dispose()

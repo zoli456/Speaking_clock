@@ -96,7 +96,7 @@
             AutoScaleBaseSize = new Size(7, 15);
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(176, 271);
+            ClientSize = new Size(183, 240);
             Controls.Add(radLabel2);
             Controls.Add(radButton1);
             Controls.Add(radLabel1);

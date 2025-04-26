@@ -85,7 +85,7 @@ public class TimeOverlayForm : NativeWindow
         while (_running)
         {
             Thread.Sleep(1000);
-            if (FullScreenChecker.IsAppInFullScreen() && Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
+            if (Beallitasok.FullScreenApplicationRunning && Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
             {
                 ShowOverlay();
                 SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0,

@@ -1,13 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Win32;
-using NAudio.CoreAudioApi;
-using NAudio.CoreAudioApi.Interfaces;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
@@ -15,6 +14,8 @@ using SharpCompress.Readers;
 using Speaking_clock.Properties;
 using Telerik.WinControls.UI;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.Ole32;
+using static Vanara.PInvoke.CoreAudio;
 
 namespace Speaking_Clock;
 
@@ -98,38 +99,120 @@ internal class Utils
         return "unknown key"; // Return "unknown key" if the key is not recognized
     }
 
+
     /// <summary>
-    ///     Checks if a process with the specified name is playing audio.
+    ///     Checks if any process with the specified name is currently playing audio.
     /// </summary>
-    /// <param name="processName">The name of the process to check.</param>
-    /// <returns></returns>
+    /// <param name="processName">
+    ///     The name of the process to check (e.g., "chrome", "firefox", "vlc"). Do not include the .exe
+    ///     extension.
+    /// </param>
+    /// <returns>True if at least one instance of the process is actively playing audio, false otherwise.</returns>
+    /// <exception cref="ArgumentException">Thrown if the process name is null or empty.</exception>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown if no process with the given name is found or if a Core Audio API
+    ///     call fails.
+    /// </exception>
     public static bool IsProcessPlayingAudio(string processName)
     {
-        // Get the processes by name (without the .exe extension)
-        var processes = Process.GetProcessesByName(processName);
+        if (string.IsNullOrWhiteSpace(processName))
+            throw new ArgumentException("Process name cannot be null or empty.", nameof(processName));
 
-        if (processes == null || processes.Length == 0) return false;
-
-        // Get active audio devices (like speakers)
-        var enumerator = new MMDeviceEnumerator();
-        var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-
-        foreach (var device in devices)
+        // 1. Get the Process IDs for the given process name
+        Process[] processes = Process.GetProcessesByName(processName);
+        if (processes.Length == 0)
         {
-            var sessions = device.AudioSessionManager.Sessions;
-
-            for (var i = 0; i < sessions.Count; i++)
-            {
-                var session = sessions[i];
-                // Compare session process ID with the found processes
-                foreach (var process in processes)
-                    if (session.GetProcessID == process.Id)
-                        if (session.State == AudioSessionState.AudioSessionStateActive)
-                            return true; // Process is playing audio
-            }
+            Debug.WriteLine($"No process found with the name: {processName}");
+            return false;
         }
 
-        return false; // Process is not playing audio
+        var targetProcessIds = new HashSet<uint>(processes.Select(p => (uint)p.Id));
+        foreach (var process in processes) process.Dispose();
+
+        // Ensure COM is initialized for this thread using the nested helper class
+        using var comInit = new CoInitializeScope(COINIT.COINIT_APARTMENTTHREADED);
+
+        IMMDeviceEnumerator? deviceEnumerator = null;
+        IMMDevice? defaultDevice = null;
+        IAudioSessionManager2? sessionManager = null;
+        IAudioSessionEnumerator? sessionEnumerator = null;
+
+        try
+        {
+            // 2. Get device enumerator
+            deviceEnumerator = new IMMDeviceEnumerator();
+            // 3. Get default audio endpoint
+            defaultDevice = deviceEnumerator.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eMultimedia);
+            // 4. Get session manager
+            sessionManager = defaultDevice.Activate<IAudioSessionManager2>();
+            // 5. Get session enumerator
+            sessionEnumerator = sessionManager.GetSessionEnumerator();
+
+            var sessionCount = sessionEnumerator.GetCount();
+
+            // 6. Iterate through audio sessions
+            for (var i = 0; i < sessionCount; i++)
+            {
+                IAudioSessionControl? sessionControl = null;
+                IAudioSessionControl2? sessionControl2 = null;
+                try
+                {
+                    sessionControl = sessionEnumerator.GetSession(i);
+                    sessionControl2 = sessionControl as IAudioSessionControl2;
+
+                    if (sessionControl2 != null && sessionControl != null)
+                    {
+                        // 7. Get Process ID
+                        var processId = sessionControl2.GetProcessId();
+                        // 8. Check if it's a target process
+                        if (targetProcessIds.Contains(processId))
+                        {
+                            // 9. Check state
+                            var state = sessionControl.GetState();
+                            if (state == AudioSessionState.AudioSessionStateActive)
+                            {
+                                Debug.WriteLine($"Process {processName} (PID: {processId}) is playing audio.");
+                                return true; // Found one playing
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error processing session {i}: {ex.Message}");
+                    sessionControl2 = null; // Avoid releasing potentially invalid refs
+                    sessionControl = null;
+                }
+                finally
+                {
+                    // Release COM objects for the current session
+                    if (sessionControl2 != null) Marshal.ReleaseComObject(sessionControl2);
+                    if (sessionControl != null) Marshal.ReleaseComObject(sessionControl);
+                }
+            }
+
+            Debug.WriteLine($"Process {processName} was found, but is not currently playing audio.");
+            return false; // None found playing
+        }
+        catch (COMException ex)
+        {
+            Debug.WriteLine($"A COM error occurred: {ex.Message} (HResult: {ex.HResult:X})");
+            throw new InvalidOperationException("Failed to query audio sessions via Core Audio.", ex);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"An unexpected error occurred: {ex.Message}");
+            throw new InvalidOperationException("An error occurred while checking process audio state.", ex);
+        }
+        finally
+        {
+            // Release main COM objects
+            if (sessionEnumerator != null) Marshal.ReleaseComObject(sessionEnumerator);
+            if (sessionManager != null) Marshal.ReleaseComObject(sessionManager);
+            if (defaultDevice != null) Marshal.ReleaseComObject(defaultDevice);
+            if (deviceEnumerator != null) Marshal.ReleaseComObject(deviceEnumerator);
+            // CoUninitialize handled by CoInitializeScope's Dispose
+        }
     }
 
     /// <summary>
@@ -807,5 +890,42 @@ internal class Utils
         }
 
         return filesInMemory;
+    }
+}
+
+internal class CoInitializeScope : IDisposable
+{
+    private readonly HRESULT hr;
+    private bool disposedValue;
+
+    public CoInitializeScope(COINIT dwCoInit)
+    {
+        hr = CoInitializeEx(IntPtr.Zero, dwCoInit);
+        disposedValue = false;
+        if (hr.Failed) throw new COMException("CoInitializeEx failed", (int)hr);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            // No managed resources to dispose in this class (disposing = true)
+
+            // Free unmanaged resources (COM context)
+            if (hr.Succeeded) // Only call CoUninitialize if CoInitializeEx succeeded
+                CoUninitialize();
+            disposedValue = true;
+        }
+    }
+
+    ~CoInitializeScope()
+    {
+        Dispose(false);
     }
 }

@@ -21,7 +21,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="AudioProcessor.cs" />
 		<Compile Remove="GmailMailChecker.cs" />
 	</ItemGroup>
 
@@ -61,24 +60,23 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="AudioProcessor.cs" />
 		<None Include="GmailMailChecker.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="HtmlAgilityPack" Version="1.12.0" />
+	  <PackageReference Include="HtmlAgilityPack" Version="1.12.1" />
 	  <PackageReference Include="ManagedBass" Version="3.1.1" />
 	  <PackageReference Include="ManagedBass.Mix" Version="3.1.1" />
-	  <PackageReference Include="NAudio" Version="2.2.1" />
 	  <PackageReference Include="SharpCompress" Version="0.39.0" />
 	  <PackageReference Include="sharpconfig" Version="3.2.9.1" />
 	  <PackageReference Include="System.Net.Http" Version="4.3.4" />
 	  <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
 	  <PackageReference Include="TaskScheduler" Version="2.12.1" />
 	  <PackageReference Include="UI.for.WinForms.AllControls.Net90" Version="2024.4.1113" />
-	  <PackageReference Include="Vanara.PInvoke.Kernel32" Version="4.1.1" />
-	  <PackageReference Include="Vanara.PInvoke.Shell32" Version="4.1.1" />
-	  <PackageReference Include="Vanara.PInvoke.User32" Version="4.1.1" />
+	  <PackageReference Include="Vanara.PInvoke.CoreAudio" Version="4.1.3" />
+	  <PackageReference Include="Vanara.PInvoke.Kernel32" Version="4.1.3" />
+	  <PackageReference Include="Vanara.PInvoke.Shell32" Version="4.1.3" />
+	  <PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
 	  <PackageReference Include="Vortice.Direct2D1" Version="3.6.2" />
 	  <PackageReference Include="Vortice.WinForms" Version="3.6.2" />
 	  <PackageReference Include="Vosk" Version="0.3.38" />

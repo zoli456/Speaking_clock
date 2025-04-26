@@ -196,7 +196,7 @@ internal class SpeechRecognition
             }
             case "browser":
             {
-                if (!FullScreenChecker.IsAppInFullScreen())
+                if (!Beallitasok.FullScreenApplicationRunning)
                     Task.Run(() =>
                     {
                         Debug.WriteLine("Böngésző megnyitás");
@@ -210,7 +210,7 @@ internal class SpeechRecognition
             }
             case "calculator":
             {
-                if (!FullScreenChecker.IsAppInFullScreen())
+                if (!Beallitasok.FullScreenApplicationRunning)
                     Task.Run(() =>
                     {
                         Debug.WriteLine("Számológép megnyitás");
