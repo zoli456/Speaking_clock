@@ -65,7 +65,7 @@ public partial class CustomWarningForm : Form
                 Beallitasok.CustomWarningHour = _customHour;
                 Beallitasok.CustomWarningMinute = _customMinutes;
                 Beallitasok.CustomWarningRepeate = true;
-                Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+                Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             }
             else
             {

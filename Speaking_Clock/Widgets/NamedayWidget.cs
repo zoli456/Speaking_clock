@@ -18,14 +18,12 @@ namespace Speaking_clock.Widgets;
 
 public class NamedayWidget : RenderForm
 {
-    private readonly ID2D1Factory1 _d2dFactory;
     private readonly Timer _timer;
-    private readonly IDWriteFactory dwriteFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
     private ID2D1SolidColorBrush _handBrush;
     private bool _isDragging;
     private Point _mouseDownLocation;
     private ID2D1HwndRenderTarget _renderTarget;
-    private float _scale = 1.0f; // Default scaling factor
+    private float _scale = 1.0f;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="NamedayWidget" /> class.
@@ -37,7 +35,7 @@ public class NamedayWidget : RenderForm
     {
         SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         AllowTransparency = true;
-        BackColor = Color.FromArgb(0, 0, 0, 0);
+        BackColor = Color.Transparent;
         //TransparencyKey = Color.Empty;
         // Initialize the form
         Text = "Nameday";
@@ -51,9 +49,6 @@ public class NamedayWidget : RenderForm
         // Set starting position
         StartPosition = FormStartPosition.Manual;
         Location = new Point(startX, startY);
-
-        // Initialize Direct2D factory
-        _d2dFactory = D2D1.D2D1CreateFactory<ID2D1Factory1>();
 
         // Set up a timer for updating clock
         _timer = new Timer { Interval = 60000 };
@@ -113,12 +108,13 @@ public class NamedayWidget : RenderForm
     private void CreateRenderTarget()
     {
         _renderTarget?.Dispose();
-        _renderTarget = _d2dFactory.CreateHwndRenderTarget(new RenderTargetProperties(), new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        });
+        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(),
+            new HwndRenderTargetProperties
+            {
+                Hwnd = Handle,
+                PixelSize = new SizeI(Width, Height),
+                PresentOptions = PresentOptions.None
+            });
 
         _handBrush?.Dispose();
         _handBrush = _renderTarget.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
@@ -144,7 +140,7 @@ public class NamedayWidget : RenderForm
         _renderTarget.Clear(new Color4(0, 0, 0, 0));
 
         // Draw text inside the rectangle
-        using var textFormat = dwriteFactory.CreateTextFormat(
+        using var textFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(
             "Arial",
             FontWeight.Normal,
             FontStyle.Normal,
@@ -153,7 +149,8 @@ public class NamedayWidget : RenderForm
         );
 
         using var textLayout =
-            dwriteFactory.CreateTextLayout($"Mai névnap:\n{Beallitasok.NameDays}", textFormat, Size.Width, Size.Height);
+            GraphicsFactories.DWriteFactory.CreateTextLayout($"Mai névnap:\n{Beallitasok.NameDays}", textFormat,
+                Size.Width, Size.Height);
         textLayout.TextAlignment = TextAlignment.Center;
         textLayout.ParagraphAlignment = ParagraphAlignment.Center;
 
@@ -170,7 +167,6 @@ public class NamedayWidget : RenderForm
         {
             _handBrush?.Dispose();
             _renderTarget?.Dispose();
-            _d2dFactory?.Dispose();
             _timer?.Dispose();
         }
 
@@ -202,7 +198,7 @@ public class NamedayWidget : RenderForm
             _isDragging = false;
             Beallitasok.WidgetSection["Névnap_X"].IntValue = Left;
             Beallitasok.WidgetSection["Névnap_Y"].IntValue = Top;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         }
     }
 
@@ -210,7 +206,6 @@ public class NamedayWidget : RenderForm
     {
         _handBrush?.Dispose();
         _renderTarget?.Dispose();
-        _d2dFactory?.Dispose();
         _timer?.Dispose();
     }
 

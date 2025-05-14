@@ -26,11 +26,11 @@ public partial class Beallitasok : Form
     // Constants for key event flags
     private const User32.KEYEVENTF KeyeventfKeydown = 0; // Simulate key down event
 
-    internal static readonly string Path = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
+    internal static readonly string BasePath = Path.GetDirectoryName(Application.ExecutablePath);
     internal static string SetttingsFileName = "settings.ini";
     internal static DateTime KovetkezoFigyelmeztetes;
     internal static bool WarningEnabled;
-    internal static Configuration ConfigParser = Configuration.LoadFromFile($"{Path}\\{SetttingsFileName}");
+    internal static Configuration ConfigParser = Configuration.LoadFromFile($"{BasePath}\\{SetttingsFileName}");
     internal static Section BeszédSection = ConfigParser["Beszéd"];
     internal static Section IndításSection = ConfigParser["Indítás"];
     internal static Section SzinkronizálásSection = ConfigParser["Szinkronizálás"];
@@ -72,7 +72,7 @@ public partial class Beallitasok : Form
     internal static MemoryStream TimefileStream;
     internal static Dictionary<string, MemoryStream> ZipContent;
     internal static float BaseDpi = Utils.GetSystemDpi();
-    private static JsonDocument _weatherData;
+    internal static JsonDocument weatherData;
     internal static DateTime KovetkezoBeszed;
     internal static string VoskModel = "vosk-model-small-en-us-0.15";
     internal static List<string> RadioNames = new();
@@ -90,20 +90,22 @@ public partial class Beallitasok : Form
     internal static string DefaultBrowerPath;
     internal static DateTime JelenlegiIdo;
     internal static int[] warningTimes = { 5, 10, 15, 20, 30, 45, 60 };
-    internal static RSSReader rss1, rss2, rss3, rss4;
+    internal static RssReader[] rssReader = new RssReader[4];
     internal static DotMatrixClock dotMatrix;
     internal static AnalogClock analogClock;
     internal static CalendarWidget calendarWidget;
     internal static NamedayWidget NamedayWidgetWidget;
     internal static RadioPlayerWidget radioPlayerWidget;
-    private Widget_Setup _widgetForm;
+    internal static WeatherWidget weatherWidget;
+    internal static bool FullScreenApplicationRunning;
+    private WidgetSetup _widgetForm;
     internal bool DefaultBrowserPlayingAudio;
     internal Timer? DelayedLoadTimer;
     internal bool Kimondva;
     private Mutex mutex;
     internal Nevjegy? Nevjegy;
+    private bool PendingWidgetUpdate;
     internal SystemInformation? SystemInformation;
-    internal static bool FullScreenApplicationRunning;
 
     public Beallitasok()
     {
@@ -190,7 +192,7 @@ public partial class Beallitasok : Form
         isVisibleCore = true;
         Visible = true;
 #if DEBUG
-        Utils.EncryptFile($"{Path}\\Fájlok\\RadioStations.dat", $"{Path}\\Fájlok\\RadioStations_enc.dat",
+        Utils.EncryptFile($"{BasePath}\\Fájlok\\RadioStations.dat", $"{BasePath}\\Fájlok\\RadioStations_enc.dat",
             RadioDataKey);
 #endif
         Activate();
@@ -382,9 +384,9 @@ public partial class Beallitasok : Form
             }
         }
 
-        ConfigParser.SaveToFile($"{Path}\\{SetttingsFileName}");
+        ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
         ZipContent =
-            Utils.LoadPasswordProtectedZipIntoMemory($"{Path}\\Hangok\\{BeszédSection["Hang"].StringValue}",
+            Utils.LoadPasswordProtectedZipIntoMemory($"{BasePath}\\Hangok\\{BeszédSection["Hang"].StringValue}",
                 ZipPassword);
 
         if (QuickMenucheckBox.Checked)
@@ -477,7 +479,7 @@ public partial class Beallitasok : Form
         if (HangfelismerésSection["Bekapcsolva"].BoolValue && DefaultBrowerPath != "")
             if (DefaultBrowserPlayingAudio !=
                 Utils.IsProcessPlayingAudio(
-                    System.IO.Path.GetFileNameWithoutExtension(DefaultBrowerPath)))
+                    Path.GetFileNameWithoutExtension(DefaultBrowerPath)))
             {
                 DefaultBrowserPlayingAudio = !DefaultBrowserPlayingAudio;
 
@@ -556,13 +558,15 @@ public partial class Beallitasok : Form
             {
                 DataServices.SetDailyWallpaperAsync();
                 HáttérképSection["Utolsó_frissítés"].DateTimeValue = JelenlegiIdo;
-                ConfigParser.SaveToFile($"{Path}\\{SetttingsFileName}");
+                ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
             }
             catch (Exception exception)
             {
                 Debug.WriteLine(exception);
                 HáttérképSection["Bekapcsolva"].BoolValue = false;
             }
+
+        if (PendingWidgetUpdate && !FullScreenApplicationRunning) WidgetUpdate();
     }
 
     private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -584,10 +588,10 @@ public partial class Beallitasok : Form
     private static void hangok_kereses()
     {
         hangok_comboBox?.Items?.Clear();
-        var hangokMappaLista = Directory.GetFiles($"{Path}\\Hangok");
+        var hangokMappaLista = Directory.GetFiles($"{BasePath}\\Hangok");
         foreach (var s in hangokMappaLista)
             if (!s.Contains("mp3"))
-                hangok_comboBox.Items.Add(System.IO.Path.GetFileName(s));
+                hangok_comboBox.Items.Add(Path.GetFileName(s));
     }
 
     private void pictureBox1_Click(object sender, EventArgs e)
@@ -742,7 +746,7 @@ public partial class Beallitasok : Form
         CustomWarningHour = -1;
         CustomWarningMinute = -1;
         CustomWarningRepeate = false;
-        ConfigParser.SaveToFile($"{Path}\\{SetttingsFileName}");
+        ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
     }
 
 
@@ -770,14 +774,22 @@ public partial class Beallitasok : Form
             IntPtr.Zero); // Using IntPtr.Zero for the last argument
     }
 
-    /// <summary>
-    ///     Announce the current weather
-    /// </summary>
-    /// <returns></returns>
-    internal static async Task AnnounceWeather()
+    internal static async Task UpdateWeatherData()
     {
-        //  if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
+        if (_nextWeatherCheck < DateTime.Now)
+            try
+            {
+                var weatherJson = await DataServices.GetWeatherdotComAsync(Cordinates, Secrets.WeatherdotcomApiKey);
+                weatherData = JsonDocument.Parse(weatherJson);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error fetching weather data: {ex.Message}");
+            }
+    }
 
+    internal static async Task UpdateLocationData()
+    {
         if (string.IsNullOrEmpty(Location))
             try
             {
@@ -794,8 +806,16 @@ public partial class Beallitasok : Form
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error retrieving location by IP: {ex.Message}");
-                return;
             }
+    }
+
+    /// <summary>
+    ///     Announce the current weather
+    /// </summary>
+    /// <returns></returns>
+    internal static async Task AnnounceWeather()
+    {
+        await UpdateLocationData();
 
         if (_weatherSound != null && _nextWeatherCheck >= DateTime.Now)
         {
@@ -804,21 +824,11 @@ public partial class Beallitasok : Form
             return;
         }
 
-        if (_nextWeatherCheck < DateTime.Now)
-            try
-            {
-                var weatherJson = await DataServices.GetWeatherdotComAsync(Cordinates, Secrets.WeatherdotcomApiKey);
-                _weatherData = JsonDocument.Parse(weatherJson);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error fetching weather data: {ex.Message}");
-                return;
-            }
+        await UpdateWeatherData();
 
         try
         {
-            var current = _weatherData.RootElement.GetProperty("v3-wx-observations-current");
+            var current = weatherData.RootElement.GetProperty("v3-wx-observations-current");
             var temperature = current.GetProperty("temperature").GetInt32();
             var condition = current.GetProperty("wxPhraseLong").GetString();
 
@@ -846,26 +856,7 @@ public partial class Beallitasok : Form
     /// <returns></returns>
     internal static async Task AnnounceForecast()
     {
-        //if (OnlineRadioPlayer._playbackState == OnlineRadioPlayer.PlaybackState.Playing) return;
-
-        if (string.IsNullOrEmpty(Location))
-            try
-            {
-                var locationJson = await DataServices.GetLocationByIpAsync();
-                using var locationData = JsonDocument.Parse(locationJson);
-                var root = locationData.RootElement;
-
-                Cordinates = root.GetProperty("loc").GetString();
-                Location = root.GetProperty("city").GetString();
-
-                if (string.IsNullOrEmpty(Location))
-                    throw new Exception("Failed to retrieve location from IP.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error retrieving location by IP: {ex.Message}");
-                return;
-            }
+        await UpdateLocationData();
 
         if (_forecastSound != null && _nextWeatherCheck >= DateTime.Now)
         {
@@ -874,22 +865,12 @@ public partial class Beallitasok : Form
             return;
         }
 
-        if (_nextWeatherCheck < DateTime.Now)
-            try
-            {
-                var weatherJson = await DataServices.GetWeatherdotComAsync(Cordinates, Secrets.WeatherapiApiKey);
-                _weatherData = JsonDocument.Parse(weatherJson);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error fetching weather data: {ex.Message}");
-                return;
-            }
+        await UpdateWeatherData();
 
         try
         {
-            var current = _weatherData.RootElement.GetProperty("v3-wx-observations-current");
-            var forecast = _weatherData.RootElement.GetProperty("v3-wx-forecast-daily-3day").GetProperty("daypart")[0];
+            var current = weatherData.RootElement.GetProperty("v3-wx-observations-current");
+            var forecast = weatherData.RootElement.GetProperty("v3-wx-forecast-daily-3day").GetProperty("daypart")[0];
 
             var dataindex = 0;
             for (var i = 0; i < forecast.GetProperty("daypartName").GetArrayLength(); i++)
@@ -1041,7 +1022,7 @@ public partial class Beallitasok : Form
             Debug.WriteLine("Új érték");
             RádióSection["Hangerő"].IntValue = BeszédSection["Hangerő"].IntValue;
             RadioVolume = (float)(double)RádióSection["Hangerő"].IntValue / 100;
-            ConfigParser.SaveToFile($"{Path}\\{SetttingsFileName}");
+            ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
         }
 
         RadioControl.RadiotrackBar.Value = RádióSection["Hangerő"].IntValue;
@@ -1106,7 +1087,7 @@ public partial class Beallitasok : Form
     /// <summary>
     ///     Initalize the application after a small delay
     /// </summary>
-    private static void PostLauchSetup()
+    private static async Task PostLauchSetup()
     {
         Task.Run(async () =>
         {
@@ -1117,9 +1098,9 @@ public partial class Beallitasok : Form
                 {
                     await DataServices.DownloadFileAsync(
                         "https://raw.githubusercontent.com/zoli456/Speaking_clock/main/stations/RadioStations_enc.dat",
-                        $"{Path}\\Fájlok\\RadioStations.dat");
+                        $"{BasePath}\\Fájlok\\RadioStations.dat");
                     RádióSection["Utolsó_frissítés"].DateTimeValue = DateTime.Now.AddDays(2);
-                    ConfigParser.SaveToFile($"{Path}\\{SetttingsFileName}");
+                    ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
                     Debug.WriteLine("Updating radios was successful.");
                 }
                 catch (Exception ex)
@@ -1128,10 +1109,10 @@ public partial class Beallitasok : Form
             }
 
 
-            if (File.Exists($"{Path}\\Fájlok\\RadioStations.dat"))
+            if (File.Exists($"{BasePath}\\Fájlok\\RadioStations.dat"))
             {
                 var file2 = Encoding.UTF8
-                    .GetString(Utils.DecryptFileToMemory($"{Path}\\Fájlok\\RadioStations.dat", RadioDataKey))
+                    .GetString(Utils.DecryptFileToMemory($"{BasePath}\\Fájlok\\RadioStations.dat", RadioDataKey))
                     .Split("\n");
                 for (var i = 0; i < file2.Length; i++)
                 {
@@ -1207,12 +1188,12 @@ public partial class Beallitasok : Form
             CustomWarningRepeate = true;
         }
 
-        AlarmSound = new MemoryStream(File.ReadAllBytes($"{Path}\\Hangok\\alarm.mp3"));
-        NotificationSound = new MemoryStream(File.ReadAllBytes($"{Path}\\Hangok\\notification.mp3"));
+        AlarmSound = new MemoryStream(File.ReadAllBytes($"{BasePath}\\Hangok\\alarm.mp3"));
+        NotificationSound = new MemoryStream(File.ReadAllBytes($"{BasePath}\\Hangok\\notification.mp3"));
         hangok_kereses();
         hangok_comboBox.SelectedIndex = hangok_comboBox.FindStringExact(BeszédSection["Hang"].StringValue);
         ZipContent =
-            Utils.LoadPasswordProtectedZipIntoMemory($"{Path}\\Hangok\\{BeszédSection["Hang"].StringValue}",
+            Utils.LoadPasswordProtectedZipIntoMemory($"{BasePath}\\Hangok\\{BeszédSection["Hang"].StringValue}",
                 ZipPassword);
 
         /* if (GmailSection["Bekapcsolva"].BoolValue)
@@ -1253,41 +1234,13 @@ public partial class Beallitasok : Form
             }
         }
 
-        if (RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue)
-        {
-            Debug.WriteLine("RSS olvasó 1 bekapcsolva!");
-            rss1 = new RSSReader(1, RSS_Reader_Section["Olvasó_1_URL"].StringValue,
-                RSS_Reader_Section["Olvasó_1_Név"].StringValue, "blue",
-                RSS_Reader_Section["Olvasó_1_Pos_X"].IntValue,
-                RSS_Reader_Section["Olvasó_1_Pos_Y"].IntValue);
-        }
+        if (RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue) EnableRSSReader(1);
 
-        if (RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue)
-        {
-            Debug.WriteLine("RSS olvasó 2 bekapcsolva!");
-            rss2 = new RSSReader(2, RSS_Reader_Section["Olvasó_2_URL"].StringValue,
-                RSS_Reader_Section["Olvasó_2_Név"].StringValue, "red",
-                RSS_Reader_Section["Olvasó_2_Pos_X"].IntValue,
-                RSS_Reader_Section["Olvasó_2_Pos_Y"].IntValue, 601000);
-        }
+        if (RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue) EnableRSSReader(2);
 
-        if (RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue)
-        {
-            Debug.WriteLine("RSS olvasó 3 bekapcsolva!");
-            rss3 = new RSSReader(3, RSS_Reader_Section["Olvasó_3_URL"].StringValue,
-                RSS_Reader_Section["Olvasó_3_Név"].StringValue, "orange",
-                RSS_Reader_Section["Olvasó_3_Pos_X"].IntValue,
-                RSS_Reader_Section["Olvasó_3_Pos_Y"].IntValue, 602000);
-        }
+        if (RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue) EnableRSSReader(3);
 
-        if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue)
-        {
-            Debug.WriteLine("RSS olvasó 4 bekapcsolva!");
-            rss4 = new RSSReader(4, RSS_Reader_Section["Olvasó_4_URL"].StringValue,
-                RSS_Reader_Section["Olvasó_4_Név"].StringValue, "green",
-                RSS_Reader_Section["Olvasó_4_Pos_X"].IntValue,
-                RSS_Reader_Section["Olvasó_4_Pos_Y"].IntValue, 603000);
-        }
+        if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue) EnableRSSReader(4);
 
         if (WidgetSection["Analóg_Bekapcsolva"].BoolValue)
         {
@@ -1325,6 +1278,16 @@ public partial class Beallitasok : Form
                 new RadioPlayerWidget(WidgetSection["Rádió_X"].IntValue, WidgetSection["Rádió_Y"].IntValue);
         }
 
+        if (WidgetSection["Időjárás_Bekapcsolva"].BoolValue)
+        {
+            Debug.WriteLine("Időjárás bekapcsolva!");
+            await UpdateLocationData();
+            await UpdateWeatherData();
+            weatherWidget =
+                new WeatherWidget(WidgetSection["Időjárás_X"].IntValue, WidgetSection["Időjárás_Y"].IntValue,
+                    WidgetSection["Időjárás_Napok"].IntValue);
+        }
+
 
         if (BeszédSection["Bekapcsolva"].BoolValue)
             KovetkezoBeszed = DateTime.Now.AddMinutes(BeszédSection["Gyakoriság"].IntValue);
@@ -1343,6 +1306,40 @@ public partial class Beallitasok : Form
             QuickMenucheckBox.Checked = true;
             MouseButtonPress.ActivateMouseHook();
         }
+    }
+
+    internal static void EnableRSSReader(int index)
+    {
+        var rssReaderSetting = new RssReaderSettings();
+        Debug.WriteLine($"RSS Olvasó {index} bekapcsolva!");
+        rssReaderSetting.InitialX = RSS_Reader_Section[$"Olvasó_{index}_Pos_X"].IntValue;
+        rssReaderSetting.InitialY = RSS_Reader_Section[$"Olvasó_{index}_Pos_Y"].IntValue;
+        switch (index)
+        {
+            case 1:
+            {
+                rssReaderSetting.HeaderColor = "blue";
+                break;
+            }
+            case 2:
+            {
+                rssReaderSetting.HeaderColor = "red";
+                break;
+            }
+            case 3:
+            {
+                rssReaderSetting.HeaderColor = "green";
+                break;
+            }
+            case 4:
+            {
+                rssReaderSetting.HeaderColor = "orange";
+                break;
+            }
+        }
+
+        rssReader[index - 1] = new RssReader(index, RSS_Reader_Section[$"Olvasó_{index}_URL"].StringValue,
+            RSS_Reader_Section[$"Olvasó_{index}_Név"].StringValue, rssReaderSetting);
     }
 
     private void hardwareToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1434,12 +1431,12 @@ public partial class Beallitasok : Form
 
     private void játékJavítás1TelepítésToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        Utils.ExtractPasswordProtectedZip($"{Path}\\Fájlok\\GameFix1", "Amjgw9LRXWsXyu5Sw7YE");
+        Utils.ExtractPasswordProtectedZip($"{BasePath}\\Fájlok\\GameFix1", "Amjgw9LRXWsXyu5Sw7YE");
     }
 
     private void játékJavítás2TelepítésToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        Utils.ExtractPasswordProtectedZip($"{Path}\\Fájlok\\GameFix2", "Amjgw9LRXWsXyu5Sw7YE");
+        Utils.ExtractPasswordProtectedZip($"{BasePath}\\Fájlok\\GameFix2", "Amjgw9LRXWsXyu5Sw7YE");
     }
 
     private void winrarTelepítéseToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1483,12 +1480,33 @@ public partial class Beallitasok : Form
     {
         if (_widgetForm == null || _widgetForm.IsDisposed)
         {
-            _widgetForm = new Widget_Setup();
+            _widgetForm = new WidgetSetup();
             _widgetForm.Show();
         }
         else
         {
             _widgetForm?.Focus();
+        }
+    }
+
+    private void RssUpdateTimer_Tick(object sender, EventArgs e)
+    {
+        PendingWidgetUpdate = true;
+        RssUpdateTimer.Enabled = false;
+    }
+
+    private async void WidgetUpdate()
+    {
+        PendingWidgetUpdate = false;
+        RssUpdateTimer.Enabled = true;
+        if (RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue) await rssReader[0].OnUpdateTimerElapsedAsync();
+        if (RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue) await rssReader[1].OnUpdateTimerElapsedAsync();
+        if (RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue) await rssReader[2].OnUpdateTimerElapsedAsync();
+        if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue) await rssReader[0].OnUpdateTimerElapsedAsync();
+        if (WidgetSection["Időjárás_Bekapcsolva"].BoolValue)
+        {
+            await UpdateWeatherData();
+            weatherWidget.FetchWeatherDataAndForecast();
         }
     }
 }

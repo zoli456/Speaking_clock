@@ -12,8 +12,7 @@ namespace Speaking_clock.Widgets;
 
 public class DotMatrixClock : RenderForm
 {
-    private readonly ID2D1Factory1 _d2dFactory;
-    private readonly float _digitSpacing = 80; // New digit spacing variable
+    private readonly float _digitSpacing = 80;
     private readonly bool _showSeconds;
     private readonly Timer _timer;
     private ID2D1SolidColorBrush _dotBrush;
@@ -66,9 +65,6 @@ public class DotMatrixClock : RenderForm
         MouseMove += DotMatrixClock_MouseMove;
         MouseUp += DotMatrixClock_MouseUp;
         Closed += DotMatrixClock_Closed;
-
-        // Initialize Direct2D factory
-        _d2dFactory = D2D1.D2D1CreateFactory<ID2D1Factory1>();
 
         // Set up a timer for blinking
         _timer = new Timer { Interval = 1000 };
@@ -130,7 +126,6 @@ public class DotMatrixClock : RenderForm
     {
         _dotBrush?.Dispose();
         _renderTarget?.Dispose();
-        _d2dFactory?.Dispose();
         _timer?.Dispose();
     }
 
@@ -147,12 +142,13 @@ public class DotMatrixClock : RenderForm
     private void CreateRenderTarget()
     {
         _renderTarget?.Dispose();
-        _renderTarget = _d2dFactory.CreateHwndRenderTarget(new RenderTargetProperties(), new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        });
+        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(),
+            new HwndRenderTargetProperties
+            {
+                Hwnd = Handle,
+                PixelSize = new SizeI(Width, Height),
+                PresentOptions = PresentOptions.None
+            });
 
         _dotBrush?.Dispose();
         _dotBrush = _renderTarget.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
@@ -347,7 +343,7 @@ public class DotMatrixClock : RenderForm
             _isDragging = false;
             Beallitasok.WidgetSection["Pontozott_X"].IntValue = Left;
             Beallitasok.WidgetSection["Pontozott_Y"].IntValue = Top;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         }
     }
 
@@ -357,7 +353,6 @@ public class DotMatrixClock : RenderForm
         {
             _dotBrush?.Dispose();
             _renderTarget?.Dispose();
-            _d2dFactory?.Dispose();
             _timer?.Dispose();
         }
 

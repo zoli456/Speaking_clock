@@ -1,316 +1,360 @@
 ﻿using System.Globalization;
+using System.Numerics;
 using Speaking_Clock;
+using Speaking_clock.Widgets;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
 using Vortice.Mathematics;
 using Vortice.WinForms;
-using Color = System.Drawing.Color;
+using D2DColor = Vortice.Mathematics.Color4;
+using DrawingColor = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
 using TextAntialiasMode = Vortice.Direct2D1.TextAntialiasMode;
 using Timer = System.Windows.Forms.Timer;
 
 public class CalendarWidget : RenderForm, IDisposable
 {
-    private readonly Timer _timer;
-    private readonly ID2D1SolidColorBrush brush;
+    private readonly ID2D1SolidColorBrush _buttonBrush;
+    private readonly ID2D1SolidColorBrush _buttonHoverBrush;
+    private readonly ID2D1SolidColorBrush _buttonSymbolBrush;
+    private readonly IDWriteTextFormat _buttonSymbolTextFormat;
+    private readonly ID2D1SolidColorBrush _currentDayBrush;
 
-    private readonly DateTime currentDate;
-    private readonly ID2D1SolidColorBrush currentDayBrush;
-    private readonly IDWriteTextFormat dayTextFormat;
-    private readonly ID2D1SolidColorBrush highlightDayBrush;
-    private readonly int LastNamedayIndex;
+    private readonly Timer _dailyUpdateTimer;
+    private readonly IDWriteTextFormat _dayTextFormat;
 
-    private readonly Button nextButton;
-    private readonly Button prevButton;
-    private readonly ID2D1HwndRenderTarget renderTarget;
-    private readonly ID2D1SolidColorBrush sundayBrush;
-    private readonly IDWriteTextFormat textFormat;
-    private readonly IDWriteFactory writeFactory;
-    internal int CellHeight = 30;
-    internal int CellSpacing = 50;
-    internal int DayFontSize = 20;
-    internal int DayHeaderToTopSpacing = 50;
-    internal int DayToNumberSpacing = -10;
-    private DateTime displayDate;
-    private Point dragOffset;
+    private readonly ID2D1SolidColorBrush _defaultTextBrush;
+    private readonly ID2D1SolidColorBrush _highlightDayBrush;
 
-    internal DayOfWeek FirstDayOfWeek = DayOfWeek.Monday;
-    internal int HeaderFontSize = 24;
+    private readonly IDWriteTextFormat _monthYearTextFormat;
+    private readonly ID2D1HwndRenderTarget _renderTarget;
+    private readonly ID2D1SolidColorBrush _sundayBrush;
 
-    private HashSet<DateTime> HighlightedDays = new();
-    private bool isDragging;
-    private ID2D1SolidColorBrush textBrush;
+    private DateTime _displayDate;
+    private Point _dragOffset;
+    private HashSet<DateTime> _highlightedDays = [];
 
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="CalendarWidget" /> class.
-    /// </summary>
-    /// <param name="startX"></param>
-    /// <param name="startY"></param>
+    // Dragging
+    private bool _isDragging;
+    private bool _isMouseOverNextButton;
+    private bool _isMouseOverPrevButton;
+    private RectangleF _nextButtonRect;
+
+    private RectangleF _prevButtonRect;
+    private int _yearOfLastHolidayCalculation;
+    public DayOfWeek FirstDayOfWeek = DayOfWeek.Monday;
+
     public CalendarWidget(int startX = 100, int startY = 100)
     {
-        // Form settings
         SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         SetStyle(ControlStyles.AllPaintingInWmPaint, true);
         SetStyle(ControlStyles.UserPaint, true);
         FormBorderStyle = FormBorderStyle.None;
-        Width = 410;
-        Height = 300;
-        Opacity = 0.9f;
+        Width = CalendarLook.DefaultWidth;
+        Height = CalendarLook.DefaultHeight;
+        Opacity = CalendarLook.WidgetOpacity;
         AllowTransparency = true;
-        BackColor = Color.FromArgb(0, 0, 0, 0);
+        BackColor = DrawingColor.FromArgb(0, 0, 0, 0);
         TransparencyKey = BackColor;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         Location = new Point(startX, startY);
 
-        currentDate = DateTime.Now;
-        displayDate = currentDate;
-        LastNamedayIndex = displayDate.Day;
+        _displayDate = DateTime.Now;
+        _yearOfLastHolidayCalculation = _displayDate.Year;
 
-        // Direct2D/DirectWrite initialization
-        var factory = D2D1.D2D1CreateFactory<ID2D1Factory>();
         var renderProperties = new HwndRenderTargetProperties
         {
             Hwnd = Handle,
             PixelSize = new SizeI(Width, Height),
             PresentOptions = PresentOptions.None
         };
-        renderTarget = factory.CreateHwndRenderTarget(new RenderTargetProperties(), renderProperties);
+        _renderTarget =
+            GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(), renderProperties);
 
-        brush = renderTarget.CreateSolidColorBrush(new Color4(1, 1, 1)); // White
-        currentDayBrush = renderTarget.CreateSolidColorBrush(new Color4(1, 0.5f, 0)); // Orange for today
-        sundayBrush = renderTarget.CreateSolidColorBrush(new Color4(1, 0, 0)); // Red for Sundays
-        highlightDayBrush = renderTarget.CreateSolidColorBrush(new Color4(1, 0, 0)); // Red for highlighted days
+        _defaultTextBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1, 1, 1, 0.9f)); // White
+        _currentDayBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1, 0.6f, 0, 0.9f)); // Orange
+        _sundayBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1, 0.2f, 0.2f, 0.9f)); // Red
+        _highlightDayBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1, 0.2f, 0.2f, 0.9f)); // Red
 
-        writeFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
-        textFormat = writeFactory.CreateTextFormat("Arial", FontWeight.Bold, FontStyle.Normal, FontStretch.Normal,
-            HeaderFontSize);
-        dayTextFormat = writeFactory.CreateTextFormat("Arial", FontWeight.Bold, FontStyle.Normal, FontStretch.Normal,
-            DayFontSize);
+        _buttonBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(0.3f, 0.3f, 0.3f, 0.7f)); // Dark Gray
+        _buttonHoverBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(0.5f, 0.5f, 0.5f, 0.8f)); // Lighter Gray
+        _buttonSymbolBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1f, 1f, 1f, 0.9f)); // White symbol
 
-        // Navigation buttons
-        nextButton = new Button { Text = ">", Width = 40, Height = 25, BackColor = BackColor };
-        prevButton = new Button { Text = "<", Width = 40, Height = 25, BackColor = BackColor };
-        Controls.Add(nextButton);
-        Controls.Add(prevButton);
+        _monthYearTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat("Arial", FontWeight.Bold,
+            FontStyle.Normal,
+            FontStretch.Normal, CalendarLook.HeaderFontSize);
+        _dayTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat("Arial", FontWeight.Normal, FontStyle.Normal,
+            FontStretch.Normal, CalendarLook.DayFontSize);
+        _buttonSymbolTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat("Arial", FontWeight.Bold,
+            FontStyle.Normal,
+            FontStretch.Normal, CalendarLook.ButtonSymbolFontSize);
+        _buttonSymbolTextFormat.TextAlignment = TextAlignment.Center;
+        _buttonSymbolTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
 
-        nextButton.Click += (s, e) =>
+
+        MouseDown += OnWidgetMouseDown;
+        MouseMove += OnWidgetMouseMove;
+        MouseUp += OnWidgetMouseUp;
+        MouseWheel += OnWidgetMouseWheel;
+        MouseLeave += OnWidgetMouseLeave;
+        Resize += OnWidgetResize;
+
+        UpdateButtonRects();
+        SetHighlightedDays(GetHolidaysForYear(_displayDate.Year));
+
+        _dailyUpdateTimer = new Timer();
+        _dailyUpdateTimer.Tick += (s, e) =>
         {
-            displayDate = displayDate.AddMonths(1);
             Invalidate();
+            UpdateDailyTimerInterval();
         };
-        prevButton.Click += (s, e) =>
-        {
-            displayDate = displayDate.AddMonths(-1);
-            Invalidate();
-        };
-
-        MouseDown += (s, e) => StartDrag(e);
-        MouseMove += (s, e) => DragForm(e);
-        MouseUp += (s, e) => StopDrag();
-        Resize += (s, e) => UpdateButtonPositions();
-        UpdateButtonPositions();
-        var currentyear = DateTime.Now.Year;
-        SetHighlightedDays(new List<DateTime>
-        {
-            new(currentyear, 1, 1),
-            new(currentyear, 3, 15),
-            EasterSunday(currentyear).AddDays(-2),
-            EasterSunday(currentyear).AddDays(1),
-            new(currentyear, 5, 1),
-            EasterSunday(currentyear).AddDays(50),
-            new(currentyear, 8, 20),
-            new(currentyear, 10, 23),
-            new(currentyear, 11, 1),
-            new(currentyear, 12, 25),
-            new(currentyear, 12, 26)
-        });
-
-        _timer = new Timer();
-        _timer.Tick += (s, e) =>
-        {
-            // Update the displayed date to today
-            displayDate = DateTime.Now;
-            Invalidate();
-
-            // Recalculate timer interval for next midnight
-            UpdateTimerInterval();
-        };
-        UpdateTimerInterval(); // Set the first interval
-        _timer.Start();
+        UpdateDailyTimerInterval();
+        _dailyUpdateTimer.Start();
 
         Show();
     }
 
-    private void UpdateTimerInterval()
+
+    public new void Dispose()
+    {
+        _dailyUpdateTimer?.Dispose();
+
+        _defaultTextBrush?.Dispose();
+        _currentDayBrush?.Dispose();
+        _sundayBrush?.Dispose();
+        _highlightDayBrush?.Dispose();
+        _buttonBrush?.Dispose();
+        _buttonHoverBrush?.Dispose();
+        _buttonSymbolBrush?.Dispose();
+
+        _renderTarget?.Dispose();
+
+        _monthYearTextFormat?.Dispose();
+        _dayTextFormat?.Dispose();
+        _buttonSymbolTextFormat?.Dispose();
+
+        base.Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void OnWidgetResize(object sender, EventArgs e)
+    {
+        if (_renderTarget != null)
+            _renderTarget.Resize(new SizeI(ClientSize.Width, ClientSize.Height));
+        UpdateButtonRects(); // Recalculate button positions based on new size
+        Invalidate(); // Redraw the widget
+    }
+
+    private void NavigateMonth(int monthOffset)
+    {
+        _displayDate = _displayDate.AddMonths(monthOffset);
+        if (_displayDate.Year != _yearOfLastHolidayCalculation)
+        {
+            SetHighlightedDays(GetHolidaysForYear(_displayDate.Year));
+            _yearOfLastHolidayCalculation = _displayDate.Year;
+        }
+
+        Invalidate();
+    }
+
+    private void UpdateDailyTimerInterval()
     {
         var now = DateTime.Now;
         var nextMidnight = now.Date.AddDays(1);
         var timeUntilMidnight = nextMidnight - now;
-
-        _timer.Interval = (int)timeUntilMidnight.TotalMilliseconds;
-    }
-
-    public new void Dispose()
-    {
-        brush.Dispose();
-        currentDayBrush.Dispose();
-        sundayBrush.Dispose();
-        highlightDayBrush.Dispose();
-        renderTarget.Dispose();
-        textFormat.Dispose();
-        dayTextFormat.Dispose();
-        writeFactory.Dispose();
-        base.Dispose();
+        _dailyUpdateTimer.Interval = Math.Max(1000, (int)timeUntilMidnight.TotalMilliseconds);
     }
 
     public void SetHighlightedDays(IEnumerable<DateTime> days)
     {
-        HighlightedDays = new HashSet<DateTime>(days);
+        _highlightedDays = new HashSet<DateTime>(days.Select(d => d.Date));
         Invalidate();
     }
 
-    private void UpdateButtonPositions()
+    private List<DateTime> GetHolidaysForYear(int year)
     {
-        var buttonY = 20;
-        var buttonMargin = 20;
-
-        prevButton.Left = buttonMargin;
-        prevButton.Top = buttonY;
-
-        nextButton.Left = Width - nextButton.Width - buttonMargin;
-        nextButton.Top = buttonY;
-    }
-
-    private void StartDrag(MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left && Beallitasok.RSS_Reader_Section["Húzás"].BoolValue)
+        var holidays = new List<DateTime>
         {
-            isDragging = true;
-            dragOffset = new Point(e.X, e.Y);
-        }
+            new(year, 1, 1), new(year, 3, 15), new(year, 5, 1),
+            new(year, 8, 20), new(year, 10, 23), new(year, 11, 1),
+            new(year, 12, 25), new(year, 12, 26)
+        };
+        var easterSunday = CalculateEasterSunday(year);
+        holidays.Add(easterSunday.AddDays(-2)); // Good Friday
+        holidays.Add(easterSunday.AddDays(1)); // Easter Monday
+        holidays.Add(easterSunday.AddDays(50)); // Pentecost Monday
+        return holidays;
     }
 
-    private void DragForm(MouseEventArgs e)
+    private void UpdateButtonRects()
     {
-        if (isDragging)
-        {
-            var newLocation = PointToScreen(new Point(e.X, e.Y));
-            newLocation.Offset(-dragOffset.X, -dragOffset.Y);
-            Location = newLocation;
-        }
+        float prevButtonCenterX = CalendarLook.ButtonHorizontalMargin + CalendarLook.ButtonRadius;
+        float buttonCenterY = CalendarLook.ButtonTopY + CalendarLook.ButtonRadius;
+
+        _prevButtonRect = new RectangleF(
+            prevButtonCenterX - CalendarLook.ButtonRadius,
+            buttonCenterY - CalendarLook.ButtonRadius,
+            CalendarLook.ButtonRadius * 2,
+            CalendarLook.ButtonRadius * 2
+        );
+
+        float nextButtonCenterX = Width - CalendarLook.ButtonHorizontalMargin - CalendarLook.ButtonRadius;
+        _nextButtonRect = new RectangleF(
+            nextButtonCenterX - CalendarLook.ButtonRadius,
+            buttonCenterY - CalendarLook.ButtonRadius,
+            CalendarLook.ButtonRadius * 2,
+            CalendarLook.ButtonRadius * 2
+        );
     }
 
-    private void StopDrag()
+    private void OnWidgetMouseWheel(object sender, MouseEventArgs e)
     {
-        isDragging = false;
-        Beallitasok.WidgetSection["Naptár_X"].IntValue = Left;
-        Beallitasok.WidgetSection["Naptár_Y"].IntValue = Top;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        if (e.Delta > 0) NavigateMonth(-1);
+        else if (e.Delta < 0) NavigateMonth(1);
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        Render();
+        RenderCalendar();
     }
 
-    private void Render()
+    private void RenderCalendar()
     {
-        renderTarget.TextAntialiasMode = TextAntialiasMode.Cleartype;
-        renderTarget.AntialiasMode = AntialiasMode.PerPrimitive;
+        _renderTarget.TextAntialiasMode = TextAntialiasMode.Cleartype;
+        _renderTarget.AntialiasMode = AntialiasMode.PerPrimitive;
 
-        renderTarget.BeginDraw();
-        renderTarget.Clear(new Color4(0, 0, 0, 0));
-        DrawCalendar();
-        renderTarget.EndDraw();
+        _renderTarget.BeginDraw();
+        _renderTarget.Clear(new D2DColor(0, 0, 0, 0));
+
+        DrawNavigationButtons();
+        DrawMonthYearHeader();
+        DrawDayNamesHeader();
+        DrawDaysOfMonth();
+
+        _renderTarget.EndDraw();
     }
 
-    private void DrawCalendar()
+    private void DrawNavigationButtons()
     {
-        var header = displayDate.ToString("yyyy MMMM");
-        using (var textLayout = writeFactory.CreateTextLayout(header, textFormat, float.MaxValue, float.MaxValue))
+        // Previous Button
+        var prevEllipse = new Ellipse(
+            new Vector2(_prevButtonRect.Left + CalendarLook.ButtonRadius,
+                _prevButtonRect.Top + CalendarLook.ButtonRadius),
+            CalendarLook.ButtonRadius,
+            CalendarLook.ButtonRadius
+        );
+        _renderTarget.FillEllipse(prevEllipse, _isMouseOverPrevButton ? _buttonHoverBrush : _buttonBrush);
+        // _renderTarget.DrawEllipse(prevEllipse, _defaultTextBrush, 0.5f); //  thin border
+        _renderTarget.DrawText(CalendarLook.PrevButtonSymbol, _buttonSymbolTextFormat, (Rect)_prevButtonRect,
+            _buttonSymbolBrush);
+
+        // Next Button
+        var nextEllipse = new Ellipse(
+            new Vector2(_nextButtonRect.Left + CalendarLook.ButtonRadius,
+                _nextButtonRect.Top + CalendarLook.ButtonRadius),
+            CalendarLook.ButtonRadius,
+            CalendarLook.ButtonRadius
+        );
+        _renderTarget.FillEllipse(nextEllipse, _isMouseOverNextButton ? _buttonHoverBrush : _buttonBrush);
+        // _renderTarget.DrawEllipse(nextEllipse, _defaultTextBrush, 0.5f); //thin border
+        _renderTarget.DrawText(CalendarLook.NextButtonSymbol, _buttonSymbolTextFormat, (Rect)_nextButtonRect,
+            _buttonSymbolBrush);
+    }
+
+
+    private void DrawMonthYearHeader()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        var headerText = _displayDate.ToString("yyyy MMMM", culture);
+        using (var textLayout = GraphicsFactories.DWriteFactory.CreateTextLayout(headerText, _monthYearTextFormat,
+                   Width,
+                   CalendarLook.MonthYearHeaderTextHeight))
         {
-            var textWidth = textLayout.Metrics.Width;
-            var centerX = (Width - textWidth) / 2;
-            renderTarget.DrawText(header, textFormat, new Rect(centerX, 20, centerX + textWidth, 60), brush);
+            textLayout.TextAlignment = TextAlignment.Center; // Center align the header text
+            var textMetrics = textLayout.Metrics;
+            var textRect = new Rect(
+                0, // Start from the left edge of the widget for centered text
+                CalendarLook.MonthYearHeaderTextTop,
+                Width, // Span the full width for centering
+                CalendarLook.MonthYearHeaderTextTop + textMetrics.Height // Use actual text height
+            );
+            _renderTarget.DrawTextLayout(new Vector2(textRect.X, textRect.Y), textLayout, _defaultTextBrush);
         }
+    }
 
-        var cultureInfo = CultureInfo.CurrentCulture;
-        var dayNames = cultureInfo.DateTimeFormat.AbbreviatedDayNames;
-        var startIndex = (int)FirstDayOfWeek;
+    private void DrawDayNamesHeader()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        var dayNames = culture.DateTimeFormat.AbbreviatedDayNames;
+        var startDayIndex = (int)FirstDayOfWeek;
 
         for (var i = 0; i < 7; i++)
         {
-            var dayIndex = (startIndex + i) % 7;
-            float x = i * CellSpacing + 50;
-            var isLastDayOfWeek = i == 6;
+            var currentDayNameIndex = (startDayIndex + i) % 7;
+            var dayNameToDraw = dayNames[currentDayNameIndex].ToUpper(); // Consistent look
+            var dayOfWeekEnum = (DayOfWeek)currentDayNameIndex;
 
-            renderTarget.DrawText(
-                dayNames[dayIndex],
-                dayTextFormat,
-                new Rect(x, DayHeaderToTopSpacing, x + CellSpacing, DayHeaderToTopSpacing + CellHeight),
-                isLastDayOfWeek ? sundayBrush : brush
-            );
-        }
+            float x = i * CalendarLook.DayCellWidth + CalendarLook.DayColumnStartX;
+            var textRect = new Rect(x, CalendarLook.DayNamesRowTop, x + CalendarLook.DayCellWidth,
+                CalendarLook.DayNamesRowTop + CalendarLook.DayCellHeight);
 
-        var firstDay = new DateTime(displayDate.Year, displayDate.Month, 1);
-        var daysInMonth = DateTime.DaysInMonth(displayDate.Year, displayDate.Month);
-        var startDay = ((int)firstDay.DayOfWeek - (int)FirstDayOfWeek + 7) % 7;
-
-        for (var i = 0; i < daysInMonth; i++)
-        {
-            var row = (startDay + i) / 7;
-            var col = (startDay + i) % 7;
-
-            float x = col * CellSpacing + 50;
-            float y = row * CellHeight + DayHeaderToTopSpacing + CellHeight + DayToNumberSpacing;
-
-            var dateToDraw = new DateTime(displayDate.Year, displayDate.Month, i + 1);
-
-            // Determine the correct brush to use
-
-            if (dateToDraw.Date == currentDate.Date)
-                // If it's the current day, use the currentDayBrush
-                textBrush = currentDayBrush;
-            else if (HighlightedDays.Contains(dateToDraw))
-                // If the day is highlighted, use the highlightDayBrush
-                textBrush = highlightDayBrush;
-            else if (col == 6)
-                // If it's a Sunday, use the sundayBrush
-                textBrush = sundayBrush;
-            else
-                // Default to the regular brush
-                textBrush = brush;
-
-            // Draw the day number
-            renderTarget.DrawText(
-                (i + 1).ToString(),
-                dayTextFormat,
-                new Rect(x, y, x + CellSpacing, y + CellHeight),
-                textBrush
-            );
+            var brush = dayOfWeekEnum == DayOfWeek.Sunday ? _sundayBrush : _defaultTextBrush;
+            using (var textLayout = GraphicsFactories.DWriteFactory.CreateTextLayout(dayNameToDraw, _dayTextFormat,
+                       CalendarLook.DayCellWidth, CalendarLook.DayCellHeight))
+            {
+                textLayout.TextAlignment = TextAlignment.Center;
+                textLayout.ParagraphAlignment = ParagraphAlignment.Center;
+                _renderTarget.DrawTextLayout(new Vector2(textRect.Left, textRect.Top), textLayout, brush);
+            }
         }
     }
 
-    /// <summary>
-    ///     Calculate the date of Easter Sunday for a given year.
-    /// </summary>
-    /// <param name="year">The year to calculate Easter Sunday for.</param>
-    /// <returns></returns>
-    public static DateTime EasterSunday(int year)
+    private void DrawDaysOfMonth()
+    {
+        var firstDayCurrentMonth = new DateTime(_displayDate.Year, _displayDate.Month, 1);
+        var daysInMonth = DateTime.DaysInMonth(_displayDate.Year, _displayDate.Month);
+        var startColumnOffset = ((int)firstDayCurrentMonth.DayOfWeek - (int)FirstDayOfWeek + 7) % 7;
+
+        for (var dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++)
+        {
+            var dateToDraw = new DateTime(_displayDate.Year, _displayDate.Month, dayOfMonth);
+            var dayIndexInGrid = startColumnOffset + (dayOfMonth - 1);
+            var row = dayIndexInGrid / 7;
+            var col = dayIndexInGrid % 7;
+
+            float x = col * CalendarLook.DayCellWidth + CalendarLook.DayColumnStartX;
+            float y = row * CalendarLook.DayCellHeight + CalendarLook.NumbersGridYStart;
+            var textRect = new Rect(x, y, x + CalendarLook.DayCellWidth, y + CalendarLook.DayCellHeight);
+
+            ID2D1SolidColorBrush selectedBrush;
+            if (dateToDraw.Date == DateTime.Today) selectedBrush = _currentDayBrush;
+            else if (_highlightedDays.Contains(dateToDraw.Date)) selectedBrush = _highlightDayBrush;
+            else if (dateToDraw.DayOfWeek == DayOfWeek.Sunday) selectedBrush = _sundayBrush;
+            else selectedBrush = _defaultTextBrush;
+
+            using (var textLayout = GraphicsFactories.DWriteFactory.CreateTextLayout(dayOfMonth.ToString(),
+                       _dayTextFormat,
+                       CalendarLook.DayCellWidth, CalendarLook.DayCellHeight))
+            {
+                textLayout.TextAlignment = TextAlignment.Center;
+                textLayout.ParagraphAlignment = ParagraphAlignment.Center;
+                _renderTarget.DrawTextLayout(new Vector2(textRect.Left, textRect.Top), textLayout, selectedBrush);
+            }
+        }
+    }
+
+    public static DateTime CalculateEasterSunday(int year)
     {
         var day = 0;
         var month = 0;
-
         var g = year % 19;
         var c = year / 100;
         var h = (c - c / 4 - (8 * c + 13) / 25 + 19 * g + 15) % 30;
         var i = h - h / 28 * (1 - h / 28 * (29 / (h + 1)) * ((21 - g) / 11));
-
         day = i - (year + year / 4 + i + 2 - c + c / 4) % 7 + 28;
         month = 3;
-
         if (day > 31)
         {
             month++;
@@ -319,4 +363,112 @@ public class CalendarWidget : RenderForm, IDisposable
 
         return new DateTime(year, month, day);
     }
+
+    private static class CalendarLook
+    {
+        public const int DefaultWidth = 380;
+        public const int DefaultHeight = 280;
+        public const float WidgetOpacity = 1;
+
+        // Round Button Styling
+        public const int ButtonRadius = 12;
+        public const int ButtonTopY = 10;
+        public const int ButtonHorizontalMargin = 10;
+        public const string PrevButtonSymbol = "<";
+        public const string NextButtonSymbol = ">";
+        public const int ButtonSymbolFontSize = 16;
+
+        public const int MonthYearHeaderTextTop = 10;
+        public const int MonthYearHeaderTextHeight = 30;
+
+        public const int DayNamesRowTop = MonthYearHeaderTextTop + MonthYearHeaderTextHeight + 5; // Y for day names
+        public const int DayCellWidth = (DefaultWidth - DayColumnStartX * 2 + 10) / 7;
+        public const int DayCellHeight = 28;
+
+        public const int NumbersGridYStart = DayNamesRowTop + DayCellHeight + 5;
+        public const int HeaderFontSize = 24;
+        public const int DayFontSize = 20;
+        public const int DayColumnStartX = 15;
+    }
+
+    #region Dragging Logic & Mouse Interaction for Buttons
+
+    private void OnWidgetMouseDown(object sender, MouseEventArgs e)
+    {
+        var mousePoint = new PointF(e.X, e.Y);
+
+        if (_prevButtonRect.Contains(mousePoint))
+        {
+            NavigateMonth(-1);
+            return;
+        }
+
+        if (_nextButtonRect.Contains(mousePoint))
+        {
+            NavigateMonth(1);
+            return;
+        }
+
+        if (e.Button == MouseButtons.Left && Beallitasok.RSS_Reader_Section["Húzás"].BoolValue)
+        {
+            _isDragging = true;
+            _dragOffset = new Point(e.X, e.Y);
+        }
+    }
+
+    private new void OnWidgetMouseMove(object sender, MouseEventArgs e)
+    {
+        var mousePoint = new PointF(e.X, e.Y);
+        var needsRedraw = false;
+
+        var oldHoverPrev = _isMouseOverPrevButton;
+        _isMouseOverPrevButton = _prevButtonRect.Contains(mousePoint);
+        if (oldHoverPrev != _isMouseOverPrevButton) needsRedraw = true;
+
+        var oldHoverNext = _isMouseOverNextButton;
+        _isMouseOverNextButton = _nextButtonRect.Contains(mousePoint);
+        if (oldHoverNext != _isMouseOverNextButton) needsRedraw = true;
+
+        if (_isDragging)
+        {
+            var newLocation = PointToScreen(new Point(e.X, e.Y));
+            newLocation.Offset(-_dragOffset.X, -_dragOffset.Y);
+            Location = newLocation;
+        }
+        else if (needsRedraw)
+        {
+            Invalidate(); // Redraw for hover effect
+        }
+    }
+
+    private void OnWidgetMouseLeave(object sender, EventArgs e)
+    {
+        var needsRedraw = false;
+        if (_isMouseOverPrevButton)
+        {
+            _isMouseOverPrevButton = false;
+            needsRedraw = true;
+        }
+
+        if (_isMouseOverNextButton)
+        {
+            _isMouseOverNextButton = false;
+            needsRedraw = true;
+        }
+
+        if (needsRedraw) Invalidate();
+    }
+
+    private void OnWidgetMouseUp(object sender, MouseEventArgs e)
+    {
+        if (_isDragging)
+        {
+            _isDragging = false;
+            Beallitasok.WidgetSection["Naptár_X"].IntValue = Left;
+            Beallitasok.WidgetSection["Naptár_Y"].IntValue = Top;
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+        }
+    }
+
+    #endregion
 }

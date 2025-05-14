@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Speaking_clock.Widgets;
 using Vanara.PInvoke;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
@@ -9,16 +10,12 @@ namespace Speaking_Clock;
 
 public class TimeOverlayForm : NativeWindow
 {
-    private const int LWA_COLORKEY = 0x00000001;
-    private static readonly IntPtr HWND_TOPMOST = new(-1);
-    private ID2D1Factory _d2dFactory;
     private bool _isVisible = true;
     private ID2D1HwndRenderTarget _renderTarget;
     private Thread _renderThread;
     private bool _running;
     private ID2D1SolidColorBrush _textBrush;
     private IDWriteTextFormat _textFormat;
-    private IDWriteFactory _writeFactory;
 
     public TimeOverlayForm()
     {
@@ -50,17 +47,14 @@ public class TimeOverlayForm : NativeWindow
         var hwnd = safeHwnd.DangerousGetHandle();
         AssignHandle(hwnd);
 
-        SetLayeredWindowAttributes(hwnd, 0, 255, (LayeredWindowAttributes)LWA_COLORKEY);
+        SetLayeredWindowAttributes(hwnd, 0, 255, LayeredWindowAttributes.LWA_COLORKEY);
     }
 
 
     private void InitializeDirect2D()
     {
-        _d2dFactory = D2D1.D2D1CreateFactory<ID2D1Factory>();
-        _writeFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
-
         // Create the render target and assign it to _renderTarget
-        _renderTarget = _d2dFactory.CreateHwndRenderTarget(
+        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(
             new RenderTargetProperties(),
             new HwndRenderTargetProperties
             {
@@ -70,7 +64,7 @@ public class TimeOverlayForm : NativeWindow
             });
         // Create a solid color brush and text format using the render target and DirectWrite factory
         _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(1, 1, 1)); // White color
-        _textFormat = _writeFactory.CreateTextFormat("Segoe UI", 24.0f);
+        _textFormat = GraphicsFactories.DWriteFactory.CreateTextFormat("Segoe UI", 24.0f);
     }
 
     private void StartRenderLoop()
@@ -88,7 +82,7 @@ public class TimeOverlayForm : NativeWindow
             if (Beallitasok.FullScreenApplicationRunning && Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
             {
                 ShowOverlay();
-                SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0,
+                SetWindowPos(Handle, HWND.HWND_TOPMOST, 0, 0, 0, 0,
                     SetWindowPosFlags.SWP_NOMOVE | SetWindowPosFlags.SWP_NOSIZE);
                 _renderTarget.BeginDraw();
                 _renderTarget.Clear(new Color4(0, 0, 0, 0)); // Transparent background
@@ -116,8 +110,6 @@ public class TimeOverlayForm : NativeWindow
             _textBrush.Dispose();
             _textFormat.Dispose();
             _renderTarget.Dispose();
-            _writeFactory.Dispose();
-            _d2dFactory.Dispose();
         }
 
         /*if (m.Msg == (int)WindowMessage.WM_WINDOWPOSCHANGED)

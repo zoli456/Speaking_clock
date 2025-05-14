@@ -1,6 +1,6 @@
 ﻿namespace Speaking_clock
 {
-    partial class Widget_Setup
+    partial class WidgetSetup
     {
         /// <summary>
         /// Required designer variable.
@@ -67,6 +67,9 @@
             AnalogClockcheckBox = new CheckBox();
             NamedaycheckBox = new CheckBox();
             groupBox3 = new GroupBox();
+            label15 = new Label();
+            DaystextBox = new TextBox();
+            WeathercheckBox = new CheckBox();
             RadiocheckBox = new CheckBox();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -491,6 +494,9 @@
             // 
             // groupBox3
             // 
+            groupBox3.Controls.Add(label15);
+            groupBox3.Controls.Add(DaystextBox);
+            groupBox3.Controls.Add(WeathercheckBox);
             groupBox3.Controls.Add(RadiocheckBox);
             groupBox3.Controls.Add(NamedaycheckBox);
             groupBox3.Location = new Point(12, 348);
@@ -499,6 +505,35 @@
             groupBox3.TabIndex = 27;
             groupBox3.TabStop = false;
             groupBox3.Text = "Egyéb";
+            // 
+            // label15
+            // 
+            label15.AutoSize = true;
+            label15.Location = new Point(292, 28);
+            label15.Name = "label15";
+            label15.Size = new Size(29, 15);
+            label15.TabIndex = 32;
+            label15.Text = "Nap";
+            // 
+            // DaystextBox
+            // 
+            DaystextBox.Location = new Point(230, 22);
+            DaystextBox.MaxLength = 1;
+            DaystextBox.Name = "DaystextBox";
+            DaystextBox.Size = new Size(56, 23);
+            DaystextBox.TabIndex = 31;
+            // 
+            // WeathercheckBox
+            // 
+            WeathercheckBox.AutoSize = true;
+            WeathercheckBox.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+            WeathercheckBox.Location = new Point(148, 22);
+            WeathercheckBox.Name = "WeathercheckBox";
+            WeathercheckBox.Size = new Size(76, 21);
+            WeathercheckBox.TabIndex = 30;
+            WeathercheckBox.Text = "Időjárás";
+            WeathercheckBox.UseVisualStyleBackColor = true;
+            WeathercheckBox.CheckedChanged += WeathercheckBox_CheckedChanged;
             // 
             // RadiocheckBox
             // 
@@ -512,7 +547,7 @@
             RadiocheckBox.UseVisualStyleBackColor = true;
             RadiocheckBox.CheckedChanged += RadiocheckBox_CheckedChanged;
             // 
-            // Widget_Setup
+            // WidgetSetup
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -524,11 +559,11 @@
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = false;
-            Name = "Widget_Setup";
+            Name = "WidgetSetup";
             ShowIcon = false;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Kisalkalmazás beállítások";
+            Text = "Kütyü beállítások";
             FormClosed += RSS_Setup_FormClosed;
             Load += RSS_Setup_Load;
             groupBox1.ResumeLayout(false);
@@ -583,5 +618,8 @@
         private CheckBox SmallcheckBox1;
         private GroupBox groupBox3;
         private CheckBox RadiocheckBox;
+        private CheckBox WeathercheckBox;
+        private Label label15;
+        private TextBox DaystextBox;
     }
 }

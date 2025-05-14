@@ -60,7 +60,7 @@ public partial class VirtualKeyboard : RadForm
                 Debug.WriteLine("Dragging stopped.");
                 Beallitasok.GyorsmenüSection["Billentyűzet_PosX"].IntValue = Top;
                 Beallitasok.GyorsmenüSection["Billentyűzet_PosY"].IntValue = Left;
-                Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+                Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             }
         }
 
@@ -82,6 +82,6 @@ public partial class VirtualKeyboard : RadForm
         }
 
         Beallitasok.GyorsmenüSection["Billentyűzet_Grey"].BoolValue = radCheckBox1.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
     }
 }

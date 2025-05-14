@@ -18,8 +18,6 @@ internal class SpeechRecognition
     private static Model _voskModel;
     internal static string[] Temp;
 
-    private static readonly HWND HwndTopmost = new(new IntPtr(-1));
-
     // Callback for recording
     private static bool RecordingCallback(int handle, IntPtr buffer, int length, IntPtr user)
     {
@@ -58,13 +56,11 @@ internal class SpeechRecognition
                 Debug.WriteLine($"Model path not found: {modelPath}");
                 return;
             }
+
             if (!IsRecordingDeviceInitialized())
                 if (!Bass.RecordInit())
-                {
                     Debug.WriteLine("RecordInit failed: " + Bass.LastError);
-                   // return;
-                }
-
+            // return;
             // Load or reload model and recognizer
             _voskModel?.Dispose();
             _voskModel = new Model(modelPath);
@@ -204,7 +200,7 @@ internal class SpeechRecognition
                         browserProcess.WaitForInputIdle();
                         var hWnd = new HWND(browserProcess.MainWindowHandle);
                         User32.SetForegroundWindow(hWnd);
-                        User32.SetWindowPos(hWnd, HwndTopmost, 0, 0, 0, 0, TopmostFlags);
+                        User32.SetWindowPos(hWnd, HWND.HWND_TOPMOST, 0, 0, 0, 0, TopmostFlags);
                     });
                 return;
             }
@@ -218,7 +214,7 @@ internal class SpeechRecognition
                         calculatorProcess.WaitForInputIdle();
                         var hWnd = new HWND(calculatorProcess.MainWindowHandle);
                         User32.SetForegroundWindow(hWnd);
-                        User32.SetWindowPos(hWnd, HwndTopmost, 0, 0, 0, 0, TopmostFlags);
+                        User32.SetWindowPos(hWnd, HWND.HWND_TOP, 0, 0, 0, 0, TopmostFlags);
                     });
 
                 return;

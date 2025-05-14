@@ -99,6 +99,7 @@
             tabPage4 = new TabPage();
             label10 = new Label();
             tabPage6 = new TabPage();
+            RssUpdateTimer = new System.Windows.Forms.Timer(components);
             TimerMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)Refresh_button).BeginInit();
             ((System.ComponentModel.ISupportInitialize)Volume_trackBar).BeginInit();
@@ -178,12 +179,12 @@
             TimerMenu.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 238);
             TimerMenu.Items.AddRange(new ToolStripItem[] { beállításokToolStripMenuItem, rendszerinformációkToolStripMenuItem, maiIdőjárásToolStripMenuItem, holnapiIdőjárásToolStripMenuItem, maiNévnapToolStripMenuItem, rádióToolStripMenuItem, _warnings, ExitButton });
             TimerMenu.Name = "TimerMenu";
-            TimerMenu.Size = new Size(181, 202);
+            TimerMenu.Size = new Size(178, 180);
             // 
             // beállításokToolStripMenuItem
             // 
             beállításokToolStripMenuItem.Name = "beállításokToolStripMenuItem";
-            beállításokToolStripMenuItem.Size = new Size(180, 22);
+            beállításokToolStripMenuItem.Size = new Size(177, 22);
             beállításokToolStripMenuItem.Text = "Beállítások";
             beállításokToolStripMenuItem.Click += beállításokToolStripMenuItem_Click;
             // 
@@ -191,7 +192,7 @@
             // 
             rendszerinformációkToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { hardwareToolStripMenuItem, futóFolyamatokToolStripMenuItem, telepítettProgramokToolStripMenuItem, cKönytárakTelepítéseToolStripMenuItem, directX9TelepítéseToolStripMenuItem, directPlayTelepítésToolStripMenuItem, net35TelepítésToolStripMenuItem, winrarTelepítéseToolStripMenuItem, zipTelepítéseToolStripMenuItem, játékJavítás1TelepítésToolStripMenuItem, játékJavítás2TelepítésToolStripMenuItem, nVIDIAVezérlőLetöltésToolStripMenuItem, hozzáadásADefenderKivételekhezToolStripMenuItem });
             rendszerinformációkToolStripMenuItem.Name = "rendszerinformációkToolStripMenuItem";
-            rendszerinformációkToolStripMenuItem.Size = new Size(180, 22);
+            rendszerinformációkToolStripMenuItem.Size = new Size(177, 22);
             rendszerinformációkToolStripMenuItem.Text = "Eszközök";
             // 
             // hardwareToolStripMenuItem
@@ -288,40 +289,40 @@
             // maiIdőjárásToolStripMenuItem
             // 
             maiIdőjárásToolStripMenuItem.Name = "maiIdőjárásToolStripMenuItem";
-            maiIdőjárásToolStripMenuItem.Size = new Size(180, 22);
+            maiIdőjárásToolStripMenuItem.Size = new Size(177, 22);
             maiIdőjárásToolStripMenuItem.Text = "Jelenlegi időjárás";
             maiIdőjárásToolStripMenuItem.Click += maiIdőjárásToolStripMenuItem_Click;
             // 
             // holnapiIdőjárásToolStripMenuItem
             // 
             holnapiIdőjárásToolStripMenuItem.Name = "holnapiIdőjárásToolStripMenuItem";
-            holnapiIdőjárásToolStripMenuItem.Size = new Size(180, 22);
+            holnapiIdőjárásToolStripMenuItem.Size = new Size(177, 22);
             holnapiIdőjárásToolStripMenuItem.Text = "Holnapi időjárás";
             holnapiIdőjárásToolStripMenuItem.Click += holnapiIdőjárásToolStripMenuItem_Click;
             // 
             // maiNévnapToolStripMenuItem
             // 
             maiNévnapToolStripMenuItem.Name = "maiNévnapToolStripMenuItem";
-            maiNévnapToolStripMenuItem.Size = new Size(180, 22);
+            maiNévnapToolStripMenuItem.Size = new Size(177, 22);
             maiNévnapToolStripMenuItem.Text = "Mai névnap";
             maiNévnapToolStripMenuItem.Click += maiNévnapToolStripMenuItem_Click;
             // 
             // rádióToolStripMenuItem
             // 
             rádióToolStripMenuItem.Name = "rádióToolStripMenuItem";
-            rádióToolStripMenuItem.Size = new Size(180, 22);
+            rádióToolStripMenuItem.Size = new Size(177, 22);
             rádióToolStripMenuItem.Text = "Rádió";
             // 
             // _warnings
             // 
             _warnings.Name = "_warnings";
-            _warnings.Size = new Size(180, 22);
+            _warnings.Size = new Size(177, 22);
             _warnings.Text = "Értesítés...";
             // 
             // ExitButton
             // 
             ExitButton.Name = "ExitButton";
-            ExitButton.Size = new Size(180, 22);
+            ExitButton.Size = new Size(177, 22);
             ExitButton.Text = "Kilépés";
             ExitButton.Click += ExitButton_Click;
             // 
@@ -797,6 +798,11 @@
             tabPage6.Text = "Egyéb";
             tabPage6.UseVisualStyleBackColor = true;
             // 
+            // RssUpdateTimer
+            // 
+            RssUpdateTimer.Interval = 600000;
+            RssUpdateTimer.Tick += RssUpdateTimer_Tick;
+            // 
             // Beallitasok
             // 
             AcceptButton = Applybutton;
@@ -897,6 +903,7 @@
         private Label label10;
         private TabPage tabPage5;
         private TabPage tabPage6;
+        private System.Windows.Forms.Timer RssUpdateTimer;
         private static Button button4;
         internal static ToolStripMenuItem _warnings;
         internal static Button SayItNowbutton;

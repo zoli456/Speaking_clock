@@ -120,7 +120,7 @@ public partial class RadioControl : Form
     private void RadiotrackBar_MouseUp(object sender, MouseEventArgs e)
     {
         if (_trackbarMouseDown && _trackbarScrolling)
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
 
 
         _trackbarMouseDown = false;

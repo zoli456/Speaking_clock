@@ -14,9 +14,7 @@ namespace Speaking_clock.Widgets;
 
 public class AnalogClock : RenderForm
 {
-    private readonly ID2D1Factory1 _d2dFactory;
     private readonly Timer _timer;
-    private readonly IDWriteFactory dwriteFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
     private ID2D1SolidColorBrush _dotBrush;
     private ID2D1SolidColorBrush _handBrush;
     private bool _isDragging;
@@ -43,14 +41,11 @@ public class AnalogClock : RenderForm
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(420, 420);
         ShowInTaskbar = false;
-        Opacity = 0.9f;
+        Opacity = 1f;
 
         // Set starting position
         StartPosition = FormStartPosition.Manual;
         Location = new Point(startX, startY);
-
-        // Initialize Direct2D factory
-        _d2dFactory = D2D1.D2D1CreateFactory<ID2D1Factory1>();
 
         // Set up a timer for updating clock
         _timer = new Timer { Interval = 1000 };
@@ -104,12 +99,13 @@ public class AnalogClock : RenderForm
     private void CreateRenderTarget()
     {
         _renderTarget?.Dispose();
-        _renderTarget = _d2dFactory.CreateHwndRenderTarget(new RenderTargetProperties(), new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        });
+        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(),
+            new HwndRenderTargetProperties
+            {
+                Hwnd = Handle,
+                PixelSize = new SizeI(Width, Height),
+                PresentOptions = PresentOptions.None
+            });
 
         _handBrush?.Dispose();
         _handBrush = _renderTarget.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
@@ -204,7 +200,7 @@ public class AnalogClock : RenderForm
         var textX = centerX + textRadius * (float)Math.Cos(radians);
         var textY = centerY + textRadius * (float)Math.Sin(radians);
 
-        var textFormat = dwriteFactory.CreateTextFormat(
+        var textFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(
             "Arial",
             FontWeight.Bold,
             FontStyle.Normal,
@@ -213,7 +209,7 @@ public class AnalogClock : RenderForm
         );
         // Draw text using Direct2D's text rendering
 
-        var layout = dwriteFactory.CreateTextLayout(text, textFormat, 100, 50);
+        var layout = GraphicsFactories.DWriteFactory.CreateTextLayout(text, textFormat, 100, 50);
         var textWidth = layout.Metrics.Width;
         var textHeight = layout.Metrics.Height;
         _renderTarget.DrawText(text, textFormat,
@@ -228,7 +224,6 @@ public class AnalogClock : RenderForm
             _handBrush?.Dispose();
             _dotBrush?.Dispose();
             _renderTarget?.Dispose();
-            _d2dFactory?.Dispose();
             _timer?.Dispose();
         }
 
@@ -260,7 +255,7 @@ public class AnalogClock : RenderForm
             _isDragging = false;
             Beallitasok.WidgetSection["Analóg_X"].IntValue = Left;
             Beallitasok.WidgetSection["Analóg_Y"].IntValue = Top;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         }
     }
 
@@ -269,7 +264,6 @@ public class AnalogClock : RenderForm
         _handBrush?.Dispose();
         _dotBrush?.Dispose();
         _renderTarget?.Dispose();
-        _d2dFactory?.Dispose();
         _timer?.Dispose();
     }
 }

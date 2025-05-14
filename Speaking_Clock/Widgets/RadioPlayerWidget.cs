@@ -16,8 +16,6 @@ namespace Speaking_clock.Widgets;
 
 public class RadioPlayerWidget : RenderForm
 {
-    private readonly ID2D1Factory1 _d2dFactory;
-    private readonly IDWriteFactory _dwriteFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
     private readonly ContextMenuStrip _stationMenu;
     private readonly Timer _timer;
     private string _currentStation = "Nincs állomás kiválasztva";
@@ -40,7 +38,7 @@ public class RadioPlayerWidget : RenderForm
     {
         SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         AllowTransparency = true;
-        BackColor = Color.FromArgb(0, 0, 0, 0);
+        BackColor = Color.Transparent;
 
         Text = "Radio Player";
         FormBorderStyle = FormBorderStyle.None;
@@ -53,8 +51,6 @@ public class RadioPlayerWidget : RenderForm
         StartPosition = FormStartPosition.Manual;
         Location = new Point(startX, startY);
 
-        _d2dFactory = D2D1.D2D1CreateFactory<ID2D1Factory1>();
-
         // Initialize station selection menu
         _stationMenu = new ContextMenuStrip();
         PopulateStationMenu();
@@ -62,8 +58,8 @@ public class RadioPlayerWidget : RenderForm
         MouseDown += RadioPlayer_MouseDown;
         MouseMove += RadioPlayer_MouseMove;
         MouseUp += RadioPlayer_MouseUp;
-        DoubleClick += RadioPlayer_DoubleClick; // Handle double-click for play/pause
-        MouseWheel += RadioPlayer_MouseWheel; // Handle mouse wheel for volume
+        DoubleClick += RadioPlayer_DoubleClick;
+        MouseWheel += RadioPlayer_MouseWheel;
         Closed += RadioPlayer_Closed;
 
         // Set up a timer for updating volume
@@ -74,7 +70,7 @@ public class RadioPlayerWidget : RenderForm
             {
                 Debug.WriteLine("Hangerő frissítés");
                 Beallitasok.RádióSection["Hangerő"].IntValue = (int)(_volume * 100);
-                Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+                Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             }
         };
         _timer.Start();
@@ -119,7 +115,7 @@ public class RadioPlayerWidget : RenderForm
         {
             Beallitasok.RádióSection["Hangerő"].IntValue = Beallitasok.BeszédSection["Hangerő"].IntValue;
             Beallitasok.RadioVolume = (float)(double)Beallitasok.RádióSection["Hangerő"].IntValue / 100;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             _volume = (float)(double)Beallitasok.RádióSection["Hangerő"].IntValue / 100;
         }
         else
@@ -133,12 +129,13 @@ public class RadioPlayerWidget : RenderForm
     private void CreateRenderTarget()
     {
         _renderTarget?.Dispose();
-        _renderTarget = _d2dFactory.CreateHwndRenderTarget(new RenderTargetProperties(), new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        });
+        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(),
+            new HwndRenderTargetProperties
+            {
+                Hwnd = Handle,
+                PixelSize = new SizeI(Width, Height),
+                PresentOptions = PresentOptions.None
+            });
 
         _textBrush?.Dispose();
         _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
@@ -163,7 +160,7 @@ public class RadioPlayerWidget : RenderForm
         _renderTarget.BeginDraw();
         _renderTarget.Clear(new Color4(0, 0, 0, 0));
 
-        using var textFormat = _dwriteFactory.CreateTextFormat(
+        using var textFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(
             "Arial",
             FontWeight.Normal,
             FontStyle.Normal,
@@ -171,7 +168,7 @@ public class RadioPlayerWidget : RenderForm
             18 * _scale
         );
 
-        using var textLayout = _dwriteFactory.CreateTextLayout(
+        using var textLayout = GraphicsFactories.DWriteFactory.CreateTextLayout(
             $"Állomás: {_currentStation}\n" +
             $"Állapot: {(_isPlaying ? "Lejátszás" : "Szünet")}\n" +
             $"Hangerő: {Math.Round(_volume * 100)}%",
@@ -314,7 +311,7 @@ public class RadioPlayerWidget : RenderForm
             _isDragging = false;
             Beallitasok.WidgetSection["Rádió_X"].IntValue = Left;
             Beallitasok.WidgetSection["Rádió_Y"].IntValue = Top;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         }
     }
 
@@ -322,7 +319,6 @@ public class RadioPlayerWidget : RenderForm
     {
         _textBrush?.Dispose();
         _renderTarget?.Dispose();
-        _d2dFactory?.Dispose();
         _timer?.Dispose();
     }
 
@@ -343,7 +339,6 @@ public class RadioPlayerWidget : RenderForm
         {
             _textBrush?.Dispose();
             _renderTarget?.Dispose();
-            _d2dFactory?.Dispose();
             _timer?.Dispose();
         }
 

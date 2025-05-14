@@ -4,11 +4,11 @@ using Speaking_clock.Widgets;
 
 namespace Speaking_clock;
 
-public partial class Widget_Setup : Form
+public partial class WidgetSetup : Form
 {
     private bool initalized;
 
-    public Widget_Setup()
+    public WidgetSetup()
     {
         InitializeComponent();
     }
@@ -37,7 +37,7 @@ public partial class Widget_Setup : Form
         Beallitasok.RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue =
             !Beallitasok.RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue;
 
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
 
         if (Beallitasok.RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue)
         {
@@ -45,17 +45,14 @@ public partial class Widget_Setup : Form
             RSS_textBox1.Enabled = false;
             RSS_URL_textBox1.Enabled = false;
             Debug.WriteLine("RSS olvasó 1 bekapcsolva!");
-            Beallitasok.rss1 = new RSSReader(1, Beallitasok.RSS_Reader_Section["Olvasó_1_URL"].StringValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_1_Név"].StringValue, "blue",
-                Beallitasok.RSS_Reader_Section["Olvasó_1_Pos_X"].IntValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_1_Pos_Y"].IntValue);
+            Beallitasok.EnableRSSReader(1);
         }
         else
         {
             RSS_button1.Text = "Kikapcsolva";
             RSS_textBox1.Enabled = true;
             RSS_URL_textBox1.Enabled = true;
-            Beallitasok.rss1.Dispose();
+            Beallitasok.rssReader[0]?.Dispose();
         }
 
         Focus();
@@ -85,7 +82,7 @@ public partial class Widget_Setup : Form
         Beallitasok.RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue =
             !Beallitasok.RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue;
 
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
 
         if (Beallitasok.RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue)
         {
@@ -93,18 +90,14 @@ public partial class Widget_Setup : Form
             RSS_textBox2.Enabled = false;
             RSS_URL_textBox2.Enabled = false;
             Debug.WriteLine("RSS olvasó 2 bekapcsolva!");
-            Beallitasok.rss2 = new RSSReader(2, Beallitasok.RSS_Reader_Section["Olvasó_2_URL"].StringValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_2_Név"].StringValue, "red",
-                Beallitasok.RSS_Reader_Section["Olvasó_2_Pos_X"].IntValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_2_Pos_Y"].IntValue,
-                601000);
+            Beallitasok.EnableRSSReader(2);
         }
         else
         {
             RSS_button2.Text = "Kikapcsolva";
             RSS_textBox2.Enabled = true;
             RSS_URL_textBox2.Enabled = true;
-            Beallitasok.rss2.Dispose();
+            Beallitasok.rssReader[1]?.Dispose();
         }
 
         Focus();
@@ -134,7 +127,7 @@ public partial class Widget_Setup : Form
         Beallitasok.RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue =
             !Beallitasok.RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue;
 
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
 
         if (Beallitasok.RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue)
         {
@@ -142,17 +135,14 @@ public partial class Widget_Setup : Form
             RSS_textBox3.Enabled = false;
             RSS_URL_textBox3.Enabled = false;
             Debug.WriteLine("RSS olvasó 3 bekapcsolva!");
-            Beallitasok.rss3 = new RSSReader(3, Beallitasok.RSS_Reader_Section["Olvasó_3_URL"].StringValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_3_Név"].StringValue, "orange",
-                Beallitasok.RSS_Reader_Section["Olvasó_3_Pos_X"].IntValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_3_Pos_Y"].IntValue, 602000);
+            Beallitasok.EnableRSSReader(3);
         }
         else
         {
             RSS_button3.Text = "Kikapcsolva";
             RSS_textBox3.Enabled = true;
             RSS_URL_textBox3.Enabled = true;
-            Beallitasok.rss3.Dispose();
+            Beallitasok.rssReader[2]?.Dispose();
         }
 
         Focus();
@@ -182,24 +172,21 @@ public partial class Widget_Setup : Form
         Beallitasok.RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue =
             !Beallitasok.RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue;
 
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
 
         if (Beallitasok.RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue)
         {
             RSS_button4.Text = "Bekapcsolva";
             RSS_textBox4.Enabled = false;
             RSS_URL_textBox4.Enabled = false;
-            Beallitasok.rss4 = new RSSReader(4, Beallitasok.RSS_Reader_Section["Olvasó_4_URL"].StringValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_4_Név"].StringValue, "green",
-                Beallitasok.RSS_Reader_Section["Olvasó_4_Pos_X"].IntValue,
-                Beallitasok.RSS_Reader_Section["Olvasó_4_Pos_Y"].IntValue, 603000);
+            Beallitasok.EnableRSSReader(4);
         }
         else
         {
             RSS_button4.Text = "Kikapcsolva";
             RSS_textBox4.Enabled = true;
             RSS_URL_textBox4.Enabled = true;
-            Beallitasok.rss4.Dispose();
+            Beallitasok.rssReader[3]?.Dispose();
         }
 
         Focus();
@@ -302,6 +289,11 @@ public partial class Widget_Setup : Form
             BigcheckBox2.Checked = true;
         else
             SmallcheckBox2.Checked = true;
+
+        WeathercheckBox.Checked = Beallitasok.WidgetSection["Időjárás_Bekapcsolva"].BoolValue;
+
+        DaystextBox.Text = Beallitasok.WidgetSection["Időjárás_Napok"].StringValue;
+
         initalized = true;
     }
 
@@ -315,7 +307,7 @@ public partial class Widget_Setup : Form
         if (!initalized) return;
         Debug.WriteLine($"Húzás: {Drag_checkbox.Checked}");
         Beallitasok.RSS_Reader_Section["Húzás"].BoolValue = Drag_checkbox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
     }
 
     private void checkBox1_CheckedChanged(object sender, EventArgs e)
@@ -323,7 +315,7 @@ public partial class Widget_Setup : Form
         if (!initalized) return;
         Debug.WriteLine($"Analóg óra: {AnalogClockcheckBox.Checked}");
         Beallitasok.WidgetSection["Analóg_Bekapcsolva"].BoolValue = AnalogClockcheckBox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
 
         if (Beallitasok.WidgetSection["Analóg_Bekapcsolva"].BoolValue &&
             (Beallitasok.analogClock == null || Beallitasok.analogClock.IsDisposed))
@@ -344,7 +336,7 @@ public partial class Widget_Setup : Form
         if (!initalized) return;
         Debug.WriteLine($"Pontozott óra: {DottedClockcheckBox.Checked}");
         Beallitasok.WidgetSection["Pontozott_Bekapcsolva"].BoolValue = DottedClockcheckBox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         if (Beallitasok.WidgetSection["Pontozott_Bekapcsolva"].BoolValue &&
             (Beallitasok.dotMatrix == null || Beallitasok.dotMatrix.IsDisposed))
             Beallitasok.dotMatrix = new DotMatrixClock(Beallitasok.WidgetSection["Pontozott_másodperc"].BoolValue,
@@ -368,7 +360,7 @@ public partial class Widget_Setup : Form
         if (!initalized) return;
         Debug.WriteLine($"Naptár: {Calendar_checkBox.Checked}");
         Beallitasok.WidgetSection["Naptár_Bekapcsolva"].BoolValue = Calendar_checkBox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         if (Beallitasok.WidgetSection["Naptár_Bekapcsolva"].BoolValue &&
             (Beallitasok.calendarWidget == null || Beallitasok.calendarWidget.IsDisposed))
             Beallitasok.calendarWidget = new CalendarWidget(Beallitasok.WidgetSection["Naptár_X"].IntValue,
@@ -383,7 +375,7 @@ public partial class Widget_Setup : Form
         if (!initalized) return;
         Debug.WriteLine($"Névnap: {NamedaycheckBox.Checked}");
         Beallitasok.WidgetSection["Névnap_Bekapcsolva"].BoolValue = NamedaycheckBox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         if (Beallitasok.WidgetSection["Névnap_Bekapcsolva"].BoolValue && (Beallitasok.NamedayWidgetWidget == null ||
                                                                           Beallitasok.NamedayWidgetWidget.IsDisposed))
             Beallitasok.NamedayWidgetWidget = new NamedayWidget(Beallitasok.WidgetSection["Névnap_X"].IntValue,
@@ -402,7 +394,7 @@ public partial class Widget_Setup : Form
         Beallitasok.WidgetSection["Pontozott_pont_méret"].IntValue = 7;
         Beallitasok.WidgetSection["Pontozott_pont_távolság"].IntValue = 10;
         Beallitasok.WidgetSection["Pontozott_szám_távolság"].IntValue = 50;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         initalized = true;
     }
 
@@ -415,7 +407,7 @@ public partial class Widget_Setup : Form
         Beallitasok.WidgetSection["Pontozott_pont_méret"].IntValue = 10;
         Beallitasok.WidgetSection["Pontozott_pont_távolság"].IntValue = 15;
         Beallitasok.WidgetSection["Pontozott_szám_távolság"].IntValue = 80;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         initalized = true;
     }
 
@@ -426,7 +418,7 @@ public partial class Widget_Setup : Form
         BigcheckBox1.Checked = !BigcheckBox1.Checked;
         SmallcheckBox1.Checked = true;
         Beallitasok.WidgetSection["Analóg_méret"].FloatValue = 0.4f;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         initalized = true;
     }
 
@@ -437,7 +429,7 @@ public partial class Widget_Setup : Form
         SmallcheckBox1.Checked = !SmallcheckBox1.Checked;
         BigcheckBox1.Checked = true;
         Beallitasok.WidgetSection["Analóg_méret"].FloatValue = 0.7f;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         initalized = true;
     }
 
@@ -445,7 +437,7 @@ public partial class Widget_Setup : Form
     {
         if (!initalized) return;
         Beallitasok.WidgetSection["Pontozott_másodperc"].BoolValue = ShowSecondcheckBox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
     }
 
     private void RadiocheckBox_CheckedChanged(object sender, EventArgs e)
@@ -453,7 +445,7 @@ public partial class Widget_Setup : Form
         if (!initalized) return;
         Debug.WriteLine($"Rádió: {RadiocheckBox.Checked}");
         Beallitasok.WidgetSection["Rádió_Bekapcsolva"].BoolValue = RadiocheckBox.Checked;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.Path}\\{Beallitasok.SetttingsFileName}");
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         if (Beallitasok.WidgetSection["Rádió_Bekapcsolva"].BoolValue)
         {
             Beallitasok.radioPlayerWidget = new RadioPlayerWidget(Beallitasok.WidgetSection["Rádió_X"].IntValue,
@@ -473,5 +465,46 @@ public partial class Widget_Setup : Form
         }
 
         Focus();
+    }
+
+    private async void WeathercheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        if (!initalized) return;
+        try
+        {
+            Debug.WriteLine($"Időjárás: {WeathercheckBox.Checked}");
+            Beallitasok.WidgetSection["Időjárás_Bekapcsolva"].BoolValue = WeathercheckBox.Checked;
+            var napok = int.Parse(DaystextBox.Text);
+            if (napok > 7 || napok < 0)
+            {
+                Beallitasok.WidgetSection["Időjárás_Napok"].IntValue = napok > 7 ? 7 : 0;
+                DaystextBox.Text = (napok > 7 ? 7 : 0).ToString();
+            }
+            else
+            {
+                Beallitasok.WidgetSection["Időjárás_Napok"].IntValue = napok;
+            }
+
+            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+            if (Beallitasok.WidgetSection["Időjárás_Bekapcsolva"].BoolValue)
+            {
+                await Beallitasok.UpdateLocationData();
+                await Beallitasok.UpdateWeatherData();
+                Beallitasok.weatherWidget = new WeatherWidget(Beallitasok.WidgetSection["Időjárás_X"].IntValue,
+                    Beallitasok.WidgetSection["Időjárás_Y"].IntValue,
+                    Beallitasok.WidgetSection["Időjárás_Napok"].IntValue);
+            }
+            else
+            {
+                Beallitasok.weatherWidget?.Dispose();
+            }
+
+            Focus();
+        }
+        catch (Exception err)
+        {
+            Beallitasok.WidgetSection["Időjárás_Napok"].IntValue = 0;
+            DaystextBox.Text = "0";
+        }
     }
 }

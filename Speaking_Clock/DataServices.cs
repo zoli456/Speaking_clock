@@ -48,7 +48,7 @@ public class DataServices
         try
         {
             var url =
-                $"https://api.weather.com/v3/aggcommon/v3-wx-observations-current;v3-wx-forecast-daily-3day?format=json&geocode={cordinates}&units=m&language=hu-hu&apiKey={Apikey}";
+                $"https://api.weather.com/v3/aggcommon/v3-wx-observations-current;v3-wx-forecast-daily-7day?format=json&geocode={cordinates}&units=m&language=hu-hu&apiKey={Apikey}";
 
             var response = await HttpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
