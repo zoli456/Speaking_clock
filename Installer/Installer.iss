@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Beszélő óra"
-#define MyAppVersion "1.30"
+#define MyAppVersion "1.3"
 #define MyAppPublisher "Zoli456"
 #define MyAppExeName "Speaking_Clock.exe"
 ; requires netcorecheck.exe and netcorecheck_x64.exe (see CodeDependencies.iss)
@@ -72,6 +72,7 @@ Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windo
 Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Vanara.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Telerik.Licensing.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Vanara.PInvoke.CoreAudio.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Vanara.PInvoke.DwmApi.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Vanara.PInvoke.Gdi32.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Vanara.PInvoke.Kernel32.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "G:\Programok\Speaking_Clock\Speaking_Clock\bin\x64\Release\net9.0-windows10.0.19041.0\protected\Vanara.PInvoke.Ole.dll"; DestDir: "{app}"; Flags: ignoreversion

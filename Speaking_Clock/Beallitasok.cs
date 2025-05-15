@@ -475,7 +475,7 @@ public partial class Beallitasok : Form
     private void szamlalo_Tick(object sender, EventArgs e)
     {
         JelenlegiIdo = DateTime.Now;
-        FullScreenApplicationRunning = FullScreenChecker.IsForegroundWindowFullScreen();
+        FullScreenApplicationRunning = FullScreenChecker.IsForegroundWindowFullscreen();
         if (HangfelismerésSection["Bekapcsolva"].BoolValue && DefaultBrowerPath != "")
             if (DefaultBrowserPlayingAudio !=
                 Utils.IsProcessPlayingAudio(
@@ -774,18 +774,22 @@ public partial class Beallitasok : Form
             IntPtr.Zero); // Using IntPtr.Zero for the last argument
     }
 
-    internal static async Task UpdateWeatherData()
+    internal static async Task<bool> UpdateWeatherData()
     {
         if (_nextWeatherCheck < DateTime.Now)
             try
             {
                 var weatherJson = await DataServices.GetWeatherdotComAsync(Cordinates, Secrets.WeatherdotcomApiKey);
                 weatherData = JsonDocument.Parse(weatherJson);
+                return true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error fetching weather data: {ex.Message}");
+                return false;
             }
+
+        return false;
     }
 
     internal static async Task UpdateLocationData()
@@ -1502,11 +1506,13 @@ public partial class Beallitasok : Form
         if (RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue) await rssReader[0].OnUpdateTimerElapsedAsync();
         if (RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue) await rssReader[1].OnUpdateTimerElapsedAsync();
         if (RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue) await rssReader[2].OnUpdateTimerElapsedAsync();
-        if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue) await rssReader[0].OnUpdateTimerElapsedAsync();
+        if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue) await rssReader[3].OnUpdateTimerElapsedAsync();
         if (WidgetSection["Időjárás_Bekapcsolva"].BoolValue)
         {
-            await UpdateWeatherData();
-            weatherWidget.FetchWeatherDataAndForecast();
+            if(await UpdateWeatherData())
+                weatherWidget.FetchWeatherDataAndForecast();
+            else
+                Debug.WriteLine("Időjárás widget frissítése nem szükséges.");
         }
     }
 }

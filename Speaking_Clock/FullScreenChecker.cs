@@ -1,70 +1,75 @@
 ﻿using System.Runtime.InteropServices;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.User32;
 
 namespace Speaking_Clock;
 
 internal static class FullScreenChecker
 {
-    internal static bool IsForegroundWindowFullScreenOrMaximized()
+    /// <summary>
+    ///     Checks if the foreground window covers the entire monitor (true fullscreen).
+    /// </summary>
+    public static bool IsForegroundWindowFullscreen()
     {
-        var hWnd = User32.GetForegroundWindow();
-        if (hWnd == HWND.NULL) return false;
-
-        var windowInfo = new User32.WINDOWINFO();
-        windowInfo.cbSize = (uint)Marshal.SizeOf(windowInfo);
-        if (!User32.GetWindowInfo(hWnd, ref windowInfo)) return false;
-
-        // Basic visibility checks
-        if (!windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_VISIBLE) ||
-            windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_MINIMIZE))
-            return false;
-
-        // Check for maximized state first
-        if (windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_MAXIMIZE)) // Or use User32.IsZoomed(hWnd)
-            return true;
-
-        // If not maximized, check for fullscreen state
-        var hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
-        if (hMonitor == HMONITOR.NULL) return false;
-
-        var monitorInfo = new User32.MONITORINFO();
-        monitorInfo.cbSize = (uint)Marshal.SizeOf(monitorInfo);
-        if (!User32.GetMonitorInfo(hMonitor, ref monitorInfo)) return false;
-
-        // Compare window bounds with monitor bounds for fullscreen
-        return windowInfo.rcWindow == monitorInfo.rcMonitor;
-    }
-
-    internal static bool IsForegroundWindowFullScreen()
-    {
-        var hWnd = User32.GetForegroundWindow();
-        if (hWnd == HWND.NULL) return false;
-
-        var windowInfo = new User32.WINDOWINFO();
-        windowInfo.cbSize = (uint)Marshal.SizeOf(windowInfo);
-        if (!User32.GetWindowInfo(hWnd, ref windowInfo)) return false;
-
-        if (!windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_VISIBLE) ||
-            windowInfo.dwStyle.HasFlag(User32.WindowStyles.WS_MINIMIZE)) return false;
-
-        var hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
-        if (hMonitor == HMONITOR.NULL) return false;
-
-        var monitorInfo = new User32.MONITORINFO();
-        monitorInfo.cbSize = (uint)Marshal.SizeOf(monitorInfo);
-        if (!User32.GetMonitorInfo(hMonitor, ref monitorInfo)) return false;
-
-        return windowInfo.rcWindow == monitorInfo.rcMonitor;
+        var hWnd = GetForegroundWindow();
+        return hWnd != HWND.NULL && IsWindowFullscreen(hWnd);
     }
 
     /// <summary>
-    ///     Checks if the foreground window is maximized (but not necessarily fullscreen).
+    ///     Checks if the foreground window is maximized or fullscreen.
     /// </summary>
-    /// <returns>True if the foreground window is maximized, false otherwise.</returns>
-    internal static bool IsForegroundWindowMaximized()
+    public static bool IsForegroundWindowMaximizedOrFullscreen()
     {
-        var hWnd = User32.GetForegroundWindow();
-        if (hWnd == HWND.NULL) return false;
-        return User32.IsZoomed(hWnd);
+        var hWnd = GetForegroundWindow();
+        if (hWnd == HWND.NULL || !IsWindowVisible(hWnd) || IsIconic(hWnd))
+            return false;
+
+        if (IsZoomed(hWnd)) // Maximized
+            return true;
+
+        return IsWindowFullscreen(hWnd);
     }
+
+    /// <summary>
+    ///     Determines whether the specified window occupies the full monitor area.
+    /// </summary>
+    public static bool IsWindowFullscreen(HWND hWnd)
+    {
+        if (!IsWindowVisible(hWnd) || IsIconic(hWnd))
+            return false;
+
+        // Filter out desktop and shell
+        if (hWnd == GetDesktopWindow() || hWnd == GetShellWindow())
+            return false;
+
+        // Filter out owned windows (tooltips, dropdowns, etc.)
+        if (GetWindow(hWnd, GetWindowCmd.GW_OWNER) != HWND.NULL)
+            return false;
+
+        // Get monitor info
+        var mon = MonitorFromWindow(hWnd, MonitorFlags.MONITOR_DEFAULTTONEAREST);
+        if (mon == HMONITOR.NULL)
+            return false;
+
+        var mi = new MONITORINFO { cbSize = (uint)Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(mon, ref mi))
+            return false;
+        var monRect = mi.rcMonitor;
+
+        // Get window bounds via DWM or fallback
+        RECT windowRect;
+        var hr = DwmApi.DwmGetWindowAttribute(
+            hWnd,
+            DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
+            out windowRect);
+        if (hr != 0)
+            GetWindowRect(hWnd, out windowRect);
+
+        // Compare
+        return windowRect.Left <= monRect.Left
+               && windowRect.Top <= monRect.Top
+               && windowRect.Right >= monRect.Right
+               && windowRect.Bottom >= monRect.Bottom;
+    }
+
 }

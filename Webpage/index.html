@@ -1,180 +1,142 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-  <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width,
-      initial-scale=1.0">
+<!DOCTYPE html>
+<html lang="hu" data-bs-theme="light"> <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beszélő óra</title>
-  </head>
-  <body vlink="#551A8B" text="#000000" link="#0000EE" bgcolor="#ffffff"
-    alink="#EE0000">
-    <script src="js/darkmode-js.min.js"></script>
-    <script>
-   const options = {
-  saveInCookies: true, // set to true if you want to load the site in the mode the user left it in
-  autoMatchOsTheme: true // if you have enabled dark mode it would open darkmode
-}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
 
-const darkmode = new Darkmode(options);
-</script>
-    <div align="center"><font size="+2" face="Verdana"><b>Beszélő óra</b></font><font
-        face="Verdana"><br>
-      </font> </div>
-    <font face="Verdana"> </font>
-    <div align="center"><font face="Verdana">Egy Windows rendszerekre
-        készült alkalmazás. Nevével ellentétben nem csak beszélni tud.<br>
-      </font> </div>
-    <div onclick="darkmode.toggle();" align="center">🌓</div>
-    <font face="Verdana"> ﻿<br>
-      <b>﻿Funkciók:</b><br>
-    </font>
-    <ul>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Időfelolvasás fix
-          időközönként</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Időszinkronizálás</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Képernyőkép készítés</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Indítás a rendszerrel</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Napi háttérkép
-          beállítás(Bing kereső háttérképek)</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Gyors menü(Lecseréli a
-          középső egérgomb lenyomást)</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Hangfelismerés</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Jelenlegi vagy holnapi
-          időjárás felolvasása</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Napi névnap felolvasás</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Értesítés fix perc
-          után vagy fix időben</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Játék közbeni átfedés</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Rádióhallgatás</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Eszközök(1 kattintós
-          gyors megoldások)</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Virtuális
-          billentyűzet(elérhető a gyorsmenüről)</font></li>
-      <li><font face="Verdana">&nbsp;&nbsp;&nbsp; Widgetek(Kütyük)</font></li>
-    </ul>
-    <font face="Verdana"> <br>
-      A <b>CTRL + Shift + Q</b> lenyomásával betudod bezárni a legfelső
-      ablakot ha egy program megakadna és blokkolna a cselekvésben.
-      Elérhető egy virtuális billentyűzet is de csak kizárólag a gyors
-      menüből. A program használ egy tálca menüt ahonnét a legtöbb
-      funkció elérhető. Itt található az eszközök menü pont is.<br>
-    </font><br>
-    <font face="Verdana"><font face="Verdana">Képernyőkép készítés a <b>F9</b>
-        billentyűvel lehetséges. </font></font><font face="Verdana"><font
-        face="Verdana"><font face="Verdana"><b>Shift+F9</b> megnyomásra
-          csak az aktív ablakról csinál képet. </font></font></font><font
-      face="Verdana"><font face="Verdana"><font face="Verdana"><font
-            face="Verdana">A képek a <b>Képek/Speaking_clock</b>
-            mappába kerülnek<br>
-          </font></font></font>&nbsp;<br>
-      A <b>beszédfelismerés</b> nem működik ha az alapértelmezett
-      böngésző hangot játszik le. Így ha videót nézel az interneten nem
-      fog folyamatosan beszélni a számítógép. A böngésző és a számológép
-      megnyitása parancs nem működik ha teljes képernyős programot
-      használsz. Így senki nem tud kiszúrni veled játékközben, hogy
-      kimondja őket a hátad mögött. Elérhető egy funkció amelyben hozzá
-      lehet kötni egy parancsszót egy billentyűleütéshez. Így mondjuk
-      felgyorsíthatod a játékot a "speed" szó kimondásával.<br>
-      <br>
-      Az <b>átfedés</b> arra szolgál, hogy játékközben állíts be
-      magadnak értesítéseket, hogy ne késd le a fontos eseményeket. Nem
-      működik olyan játékokban amelyek kizárólagos teljes képernyős
-      módban futnak. A gombot úgy lehet előhozni ha közel viszed az
-      egeret a bal felső sarokhoz. A másik sarokban egy folyamatosan
-      látható óra van.<br>
-      <br>
-      Az <b>eszközök</b> menüpont az informatikában kevésbé jártas
-      felhasználóknak nyújthat gyors segítséget. Elérhető funkciók:
-      Számítógép információnak kilistázása, telepített/jelenleg futó
-      program kilistázása, legújabb C++ könyvtárak telepítése, legújabb
-      Winrar/7-zip telepítése, Directplay/.net 3 engedélyezése,
-      hozzáadás a Windows Defender kivételekhez, NVIDA driver keresés,
-      Játékjavítás 1-2 telepítés. Játékjavítások főleg akkor hasznosak
-      ha nem indul egy játék vagy grafikai hibákat tapasztalsz vagy túl
-      gyorsan fut egy játék.<br>
-      <br>
-      Jelenleg elérhető kütyük: RSS hírolvasó, analóg vagy pontozott
-      óra, naptár, névnapok és rádió. Rádióban a jobb kattintással lehet
-      váltani állomást. Dupla kattintással lehet megállítani vagy
-      elindítani. Görgetéssel lehet a hangerőt változtatni. A
-      hírolvasókban is lehet lefelé görgetni ha 10-nél több hír
-      elérhető. Időjárás és akár 7 napos előrejelzés. Tartalmazza a holdfázist is.<br>
-      <br>
-      <img moz-do-not-send="true" src="images/image1.png" alt=""
-        width="389" height="455">&nbsp; <img moz-do-not-send="true"
-        src="images/image2.png" alt="" width="462" height="288"> <img
-        moz-do-not-send="true" src="images/image4.png" alt=""
-        width="295" height="294"><br>
-      <br>
-    </font><img moz-do-not-send="true" src="images/image3.png" alt=""
-      width="1390" height="751"><font face="Verdana"><br>
-      <br>
-      <b>Rendszerkövetelmény:</b> Windows 10 vagy 11, 64 bit<br>
-      <br>
-      <b>Verzió:</b> 1.3<br style="color: rgb(232, 230, 227); font-size:
-        10.6667px; font-style: normal; font-variant-ligatures: normal;
-        font-variant-caps: normal; font-weight: 400; letter-spacing:
-        normal; text-align: start; text-indent: 0px; text-transform:
-        none; word-spacing: 0px; -webkit-text-stroke-width: 0px;
-        white-space: normal; background-color: rgb(24, 26, 27);
-        text-decoration-style: initial; text-decoration-color: initial;">
-      <br style="color: rgb(232, 230, 227); font-size: 10.6667px;
-        font-style: normal; font-variant-ligatures: normal;
-        font-variant-caps: normal; font-weight: 400; letter-spacing:
-        normal; text-align: start; text-indent: 0px; text-transform:
-        none; word-spacing: 0px; -webkit-text-stroke-width: 0px;
-        white-space: normal; background-color: rgb(24, 26, 27);
-        text-decoration-style: initial; text-decoration-color: initial;">
-      <b>Letöltés</b>:<button class="redirect-button" data-encoded="aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3pvbGk0NTYvU3BlYWtpbmdfY2xvY2svbWFpbi9pbnN0YWxsZXIvU3BlYWtpbmdfY2xvY2tfc2V0dXAuZXhl">-LINK-</button><br style="color: rgb(232, 230,
-        227); font-size: 10.6667px; font-style: normal;
-        font-variant-ligatures: normal; font-variant-caps: normal;
-        font-weight: 400; letter-spacing: normal; text-align: start;
-        text-indent: 0px; text-transform: none; word-spacing: 0px;
-        -webkit-text-stroke-width: 0px; white-space: normal;
-        background-color: rgb(24, 26, 27); text-decoration-style:
-        initial; text-decoration-color: initial;">
-      <br style="color: rgb(232, 230, 227); font-size: 10.6667px;
-        font-style: normal; font-variant-ligatures: normal;
-        font-variant-caps: normal; font-weight: 400; letter-spacing:
-        normal; text-align: start; text-indent: 0px; text-transform:
-        none; word-spacing: 0px; -webkit-text-stroke-width: 0px;
-        white-space: normal; background-color: rgb(24, 26, 27);
-        text-decoration-style: initial; text-decoration-color: initial;">
-      Mindenkitől szívesen várom az építő jellegű javaslatokat. Ha
-      hiányzik egy rádióállomás könnyen hozzátudom adni a repertoárhoz.<br>
-      <br>
-      <b>Kommentek:</b></font><br>
-    <br>
-  <div id="scrambledContent" class="scrambled" data-encoded="PGlmcmFtZSBjbGFzcz0iZGFya21vZGUtaWdub3JlIg0KICAgICAgc3JjPSJodHRwczovL3d3dzUuY2JveC53cy9ib3gvP2JveGlkPTk1NDg3MyZhbXA7Ym94dGFnPVFUQlE2SyINCiAgICAgIGFsbG93dHJhbnNwYXJlbmN5PSJ5ZXMiIGFsbG93PSJhdXRvcGxheSIgbWFyZ2luaGVpZ2h0PSIwIg0KICAgICAgbWFyZ2lud2lkdGg9IjAiIHNjcm9sbGluZz0iYXV0byIgd2lkdGg9IjEwMDAiIGhlaWdodD0iNDUwIg0KICAgICAgZnJhbWVib3JkZXI9IjAiPjwvaWZyYW1lPg==">
-  </div>
-    <script>
-    // Function to decode Base64 strings
-    function decodeBase64(encoded) {
-      return atob(encoded);
-    }
+    <header class="py-3 mb-4 border-bottom">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div></div> <div class="text-center flex-grow-1">
+                    <h1>Beszélő óra</h1>
+                    <p class="lead mb-0">Egy Windows rendszerekre készült alkalmazás. Nevével ellentétben nem csak beszélni tud.</p>
+                </div>
+                <button id="theme-toggler" class="btn btn-outline-secondary" type="button" aria-label="Toggle theme">
+                    <i class="bi bi-sun-fill theme-icon-sun"></i>
+                    <i class="bi bi-moon-stars-fill theme-icon-moon d-none"></i>
+                </button>
+            </div>
+        </div>
+    </header>
 
-    // Attach event listeners to all redirect buttons
-    const buttons = document.querySelectorAll('.redirect-button');
-    buttons.forEach(button => {
-      button.addEventListener('click', () => {
-        const encodedURL = button.getAttribute('data-encoded');
-        if (encodedURL) {
-          const decodedURL = decodeBase64(encodedURL);
-          window.location.href = decodedURL; // Redirect to the decoded URL
-        }
-      });
-    });
-// Unscramble content on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      const contentDiv = document.getElementById('scrambledContent');
-      const encodedContent = contentDiv.getAttribute('data-encoded');
-      if (encodedContent) {
-        const decodedContent = decodeBase64(encodedContent);
-        contentDiv.innerHTML = decodedContent; // Interpret decoded content as HTML
-        contentDiv.classList.remove('scrambled');
-        contentDiv.classList.add('unscrambled');
-      }
-    });
-  </script>
-  </body>
+    <main class="container">
+        <section id="features" class="mb-4 p-4 shadow-sm rounded">
+            <h2>Funkciók:</h2>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">Időfelolvasás fix időközönként</li>
+                <li class="list-group-item">Időszinkronizálás</li>
+                <li class="list-group-item">Képernyőkép készítés</li>
+                <li class="list-group-item">Indítás a rendszerrel</li>
+                <li class="list-group-item">Napi háttérkép beállítás (Bing kereső háttérképek)</li>
+                <li class="list-group-item">Gyors menü (Lecseréli a középső egérgomb lenyomást)</li>
+                <li class="list-group-item">Hangfelismerés</li>
+                <li class="list-group-item">Jelenlegi vagy holnapi időjárás felolvasása</li>
+                <li class="list-group-item">Napi névnap felolvasás</li>
+                <li class="list-group-item">Értesítés fix perc után vagy fix időben</li>
+                <li class="list-group-item">Játék közbeni átfedés</li>
+                <li class="list-group-item">Rádióhallgatás</li>
+                <li class="list-group-item">Eszközök (1 kattintós gyors megoldások)</li>
+                <li class="list-group-item">Virtuális billentyűzet (elérhető a gyorsmenüről)</li>
+                <li class="list-group-item">Widgetek (Kütyük)</li>
+            </ul>
+        </section>
+
+        <section id="details" class="mb-4 p-4 shadow-sm rounded">
+            <h2>Részletek</h2>
+            <p>A <strong>CTRL + Shift + Q</strong> lenyomásával be tudod zárni a legfelső ablakot ha egy program megakadna és blokkolna a cselekvésben. Elérhető egy virtuális billentyűzet is de csak kizárólag a gyors menüből. A program használ egy tálca menüt ahonnét a legtöbb funkció elérhető. Itt található az eszközök menü pont is.</p>
+            <p>Képernyőkép készítés a <strong>F9</strong> billentyűvel lehetséges. <strong>Shift+F9</strong> megnyomásra csak az aktív ablakról csinál képet. A képek a <strong>Képek/Speaking_clock</strong> mappába kerülnek.</p>
+            <p>A <strong>beszédfelismerés</strong> nem működik ha az alapértelmezett böngésző hangot játszik le. Így ha videót nézel az interneten nem fog folyamatosan beszélni a számítógép. A böngésző és a számológép megnyitása parancs nem működik ha teljes képernyős programot használsz. Így senki nem tud kiszúrni veled játékközben, hogy kimondja őket a hátad mögött. Elérhető egy funkció amelyben hozzá lehet kötni egy parancsszót egy billentyűleütéshez. Így mondjuk felgyorsíthatod a játékot a "speed" szó kimondásával.</p>
+            <p>Az <strong>átfedés</strong> arra szolgál, hogy játékközben állíts be magadnak értesítéseket, hogy ne késd le a fontos eseményeket. Nem működik olyan játékokban amelyek kizárólagos teljes képernyős módban futnak. A gombot úgy lehet előhozni ha közel viszed az egeret a bal felső sarokhoz. A másik sarokban egy folyamatosan látható óra van.</p>
+            <p>Az <strong>eszközök</strong> menüpont az informatikában kevésbé jártas felhasználóknak nyújthat gyors segítséget. Elérhető funkciók: Számítógép információnak kilistázása, telepített/jelenleg futó program kilistázása, legújabb C++ könyvtárak telepítése, legújabb Winrar/7-zip telepítése, Directplay/.net 3 engedélyezése, hozzáadás a Windows Defender kivételekhez, NVIDA driver keresés, Játékjavítás 1-2 telepítés. Játékjavítások főleg akkor hasznosak ha nem indul egy játék vagy grafikai hibákat tapasztalsz vagy túl gyorsan fut egy játék.</p>
+            <p>Jelenleg elérhető kütyük: RSS hírolvasó, analóg vagy pontozott óra, naptár, névnapok és rádió. Rádióban a jobb kattintással lehet váltani állomást. Dupla kattintással lehet megállítani vagy elindítani. Görgetéssel lehet a hangerőt változtatni. A hírolvasókban is lehet lefelé görgetni ha 10-nél több hír elérhető. Időjárás és akár 7 napos előrejelzés. Tartalmazza a holdfázist is.</p>
+        </section>
+
+        <section id="screenshots" class="mb-4 p-4 shadow-sm rounded">
+            <h2 class="mb-3">Képernyőképek</h2>
+            <div class="row text-center">
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <figure>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="images/image1.png">
+                            <img src="images/image1.png" alt="Képernyőkép 1" class="img-fluid rounded shadow-sm">
+                        </a>
+                    </figure>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <figure>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="images/image2.png">
+                            <img src="images/image2.png" alt="Képernyőkép 2" class="img-fluid rounded shadow-sm">
+                        </a>
+                    </figure>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                     <figure>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="images/image4.png">
+                            <img src="images/image4.png" alt="Képernyőkép 4" class="img-fluid rounded shadow-sm">
+                        </a>
+                    </figure>
+                </div>
+                <div class="col-md-12 col-lg-3 mb-3">
+                    <figure>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="images/image3.png">
+                            <img src="images/image3.png" alt="Képernyőkép 3" class="img-fluid rounded shadow-sm">
+                        </a>
+                    </figure>
+                </div>
+            </div>
+        </section>
+
+        <section id="requirements" class="mb-4 p-4 shadow-sm rounded">
+            <h2>Rendszerkövetelmény:</h2>
+            <p>Windows 10 vagy 11, 64 bit</p>
+        </section>
+
+        <section id="version" class="mb-4 p-4 shadow-sm rounded">
+            <h2>Verzió:</h2>
+            <p>1.3</p>
+        </section>
+
+        <section id="download" class="mb-4 p-4 shadow-sm rounded text-center">
+            <h2>Letöltés:</h2>
+            <button class="btn btn-primary btn-lg redirect-button" data-encoded="aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3pvbGk0NTYvU3BlYWtpbmdfY2xvY2svbWFpbi9pbnN0YWxsZXIvU3BlYWtpbmdfY2xvY2tfc2V0dXAuZXhl">Letöltés most</button>
+        </section>
+
+        <section id="feedback" class="mb-4 p-4 shadow-sm rounded">
+            <h2>Visszajelzés</h2>
+            <p>Mindenkitől szívesen várom az építő jellegű javaslatokat. Ha hiányzik egy rádióállomás könnyen hozzátudom adni a repertoárhoz.</p>
+        </section>
+
+        <section id="comments" class="mb-4 p-4 shadow-sm rounded">
+            <h2>Kommentek:</h2>
+            <div id="scrambledContent" class="scrambled" data-encoded="PGlmcmFtZSBzdHlsZT0id2lkdGg6MTAwJTtoZWlnaHQ6NDUwcHg7IiBzcmM9Imh0dHBzOi8vd3d3NS5jYm94LndzL2JveC8/Ym94aWQ9OTU0ODczJmFtcDtib3h0YWc9UVRCUTZLIiBhbGxvd3RyYW5zcGFyZW5jeT0ieWVzIiBhbGxvdz0iYXV0b3BsYXkiIG1hcmdpbmhlaWdodD0iMCIgbWFyZ2lud2lkdGg9IjAiIHNjcm9sbGluZz0iYXV0byIgZnJhbWVib3JkZXI9IjAiIGNsYXNzPSJib3JkZXItMCAgZGFya21vZGUtaWdub3JlIj48L2lmcmFtZT4=">
+                </div>
+        </section>
+    </main>
+
+    <footer class="py-3 mt-auto"> <div class="container text-center">
+            <p class="mb-0">&copy; <span id="currentYear"></span> Beszélő óra</p>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="imageModalLabel">Képernyőkép</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img src="" id="modalImage" class="img-fluid" alt="Nagyított kép">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="js/main.js"></script>
+</body>
 </html>

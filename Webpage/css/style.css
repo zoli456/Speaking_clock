@@ -1,0 +1,83 @@
+/* css/style.css */
+
+/* Base body styles to ensure footer sticks to bottom */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+main {
+    flex-grow: 1;
+}
+
+/* General heading styling */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 300; /* Lighter font weight for headings */
+}
+h1 {
+    font-weight: 400; /* Slightly bolder for main title */
+}
+
+section {
+    margin-bottom: 2rem !important; /* More spacing */
+}
+
+/* Screenshots styling */
+#screenshots img {
+    border: 1px solid var(--bs-border-color); /* Use Bootstrap's border color variable */
+    padding: 0.25rem;
+}
+
+#screenshots figure a {
+    display: block; /* Ensures the anchor fills the figure for easier clicking */
+    cursor: pointer; /* Changes cursor to indicate it's clickable */
+}
+
+#screenshots figure img:hover {
+    opacity: 0.8; /* Slight visual feedback on hover */
+    transition: opacity 0.2s ease-in-out;
+}
+
+
+/* Theme toggler button styling */
+#theme-toggler {
+    min-width: 50px; /* Ensure button has enough space for icon */
+}
+
+/* Footer styling - Bootstrap handles background and text color via data-bs-theme */
+footer {
+    border-top: 1px solid var(--bs-border-color);
+}
+
+
+[data-bs-theme="dark"] #screenshots img {
+    border-color: var(--bs-gray-600); 
+}
+
+[data-bs-theme="dark"] .darkmode-ignore {}
+
+[data-bs-theme="light"] header h1,
+[data-bs-theme="light"] header .lead {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] header h1,
+[data-bs-theme="dark"] header .lead {
+    color: var(--bs-light-text-emphasis);
+section {
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .list-group-item {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-gray-700);
+}
+
+/* Modal Image Styling */
+#imageModal .modal-body img {
+    max-height: 80vh;
+    object-fit: contain;
+}
