@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Beszélő óra"
-#define MyAppVersion "1.3"
+#define MyAppVersion "1.4"
 #define MyAppPublisher "Zoli456"
 #define MyAppExeName "Speaking_Clock.exe"
 ; requires netcorecheck.exe and netcorecheck_x64.exe (see CodeDependencies.iss)

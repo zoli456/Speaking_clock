@@ -471,7 +471,7 @@ internal class RssReader : RenderForm
         if (_items.Count <= _settings.MaxDisplayItems) return; // No scrollbar if not needed
 
         var trackHeight = ClientSize.Height - _headerHeight - 10;
-        float trackX = ClientSize.Width - _settings.ScrollbarWidth - 5; 
+        float trackX = ClientSize.Width - _settings.ScrollbarWidth - 5;
         var trackY = _headerHeight + 5;
 
         // Scrollbar Thumb

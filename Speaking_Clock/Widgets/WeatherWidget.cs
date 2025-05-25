@@ -91,7 +91,9 @@ public class WeatherWidget : RenderForm
 
     private bool _isDragging;
     private IDWriteTextFormat? _largeTemperatureTextFormat;
+
     private List<string> _loadedCustomFontFamilyNames = new();
+
     //private IDWriteTextFormat? _locationTextFormat;
     private Point _mouseDownLocation;
     private ID2D1SolidColorBrush? _precipitationTextBrush;
@@ -266,14 +268,14 @@ public class WeatherWidget : RenderForm
 
 
         // Location Text Format 
-       /* _locationTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(
-            "Arial",
-            null, // Use system font collection
-            FontWeight.SemiBold,
-            FontStyle.Normal,
-            FontStretch.Normal,
-            18f,
-            CultureInfo.CurrentCulture.Name);*/
+        /* _locationTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(
+             "Arial",
+             null, // Use system font collection
+             FontWeight.SemiBold,
+             FontStyle.Normal,
+             FontStretch.Normal,
+             18f,
+             CultureInfo.CurrentCulture.Name);*/
 
         // Century Gothic Formats
         _largeTemperatureTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(centuryGothicNameToUse,
@@ -1018,7 +1020,7 @@ public class WeatherWidget : RenderForm
             _separatorBrush?.Dispose();
             _precipitationTextBrush?.Dispose();
 
-           // _locationTextFormat?.Dispose();
+            // _locationTextFormat?.Dispose();
             _largeTemperatureTextFormat?.Dispose();
             _conditionTextFormat?.Dispose();
             _defaultTextFormat?.Dispose();

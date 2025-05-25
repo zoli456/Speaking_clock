@@ -11,6 +11,7 @@ using Microsoft.Win32.TaskScheduler;
 using SharpConfig;
 using Speaking_clock;
 using Speaking_clock.Widgets;
+using Speaking_Clock.Widgets;
 using Telerik.WinControls.UI;
 using Vanara.PInvoke;
 using Configuration = SharpConfig.Configuration;
@@ -65,6 +66,10 @@ public partial class Beallitasok : Form
     internal static bool FullScreenmenuOpened;
     internal static OverlayForm Overlay;
     internal static TimeOverlayForm TimeOverlay;
+    internal static Minesweeper minesweeperForm;
+    internal static Flagguesser flagguesserForm;
+    internal static QuizWidget quizForm;
+    internal static LogoGuesser logoGuesserForm;
     internal static MemoryStream AlarmSound;
     internal static MemoryStream NotificationSound;
     internal static bool Lejátszás;
@@ -137,6 +142,12 @@ public partial class Beallitasok : Form
 
         TrayIcon.Icon = Icon;
         JelenlegiIdo = DateTime.Now;
+
+        var asm = Assembly.GetExecutingAssembly();
+        string[] resourceNames = asm.GetManifestResourceNames();
+        Debug.WriteLine("Embedded resources:");
+        foreach (var name in resourceNames) Debug.WriteLine(" • " + name);
+
         /*#if RELEASE
                 TopMost = true;
         #endif*/
@@ -1292,6 +1303,33 @@ public partial class Beallitasok : Form
                     WidgetSection["Időjárás_Napok"].IntValue);
         }
 
+        if (WidgetSection["Aknakereső_Bekapcsolva"].BoolValue)
+        {
+            Debug.WriteLine("Aknakereső bekapcsolva!");
+            minesweeperForm =
+                new Minesweeper(WidgetSection["Aknakereső_X"].IntValue, WidgetSection["Aknakereső_Y"].IntValue);
+        }
+
+        if (WidgetSection["Zászló_Bekapcsolva"].BoolValue)
+        {
+            Debug.WriteLine("Zászló bekapcsolva!");
+            flagguesserForm =
+                new Flagguesser(WidgetSection["Zászló_X"].IntValue, WidgetSection["Zászló_Y"].IntValue);
+        }
+
+        if (WidgetSection["Quiz_Bekapcsolva"].BoolValue)
+        {
+            Debug.WriteLine("Quiz bekapcsolva!");
+            quizForm =
+                new QuizWidget(WidgetSection["Quiz_X"].IntValue, WidgetSection["Quiz_Y"].IntValue);
+        }
+
+        if (WidgetSection["Logo_Bekapcsolva"].BoolValue)
+        {
+            Debug.WriteLine("Logo bekapcsolva!");
+            logoGuesserForm =
+                new LogoGuesser(WidgetSection["Logo_X"].IntValue, WidgetSection["Logo_Y"].IntValue);
+        }
 
         if (BeszédSection["Bekapcsolva"].BoolValue)
             KovetkezoBeszed = DateTime.Now.AddMinutes(BeszédSection["Gyakoriság"].IntValue);
@@ -1509,7 +1547,7 @@ public partial class Beallitasok : Form
         if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue) await rssReader[3].OnUpdateTimerElapsedAsync();
         if (WidgetSection["Időjárás_Bekapcsolva"].BoolValue)
         {
-            if(await UpdateWeatherData())
+            if (await UpdateWeatherData())
                 weatherWidget.FetchWeatherDataAndForecast();
             else
                 Debug.WriteLine("Időjárás widget frissítése nem szükséges.");

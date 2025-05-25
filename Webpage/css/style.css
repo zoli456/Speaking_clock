@@ -20,6 +20,7 @@ h1 {
     font-weight: 400; /* Slightly bolder for main title */
 }
 
+/* Custom styles for sections - Bootstrap handles background and text color via data-bs-theme */
 section {
     margin-bottom: 2rem !important; /* More spacing */
 }
@@ -51,13 +52,13 @@ footer {
     border-top: 1px solid var(--bs-border-color);
 }
 
-
 [data-bs-theme="dark"] #screenshots img {
-    border-color: var(--bs-gray-600); 
+    border-color: var(--bs-gray-600); /* Darker border for images in dark mode */
 }
 
-[data-bs-theme="dark"] .darkmode-ignore {}
-
+[data-bs-theme="dark"] .darkmode-ignore { /* Keeping class if cbox needs it */
+}
+/* Ensure the title in the header is clearly visible in both modes */
 [data-bs-theme="light"] header h1,
 [data-bs-theme="light"] header .lead {
     color: var(--bs-body-color);
@@ -65,19 +66,20 @@ footer {
 
 [data-bs-theme="dark"] header h1,
 [data-bs-theme="dark"] header .lead {
-    color: var(--bs-light-text-emphasis);
+    color: var(--bs-light-text-emphasis); /* Or another suitable dark mode text color from Bootstrap */
+}
 section {
     background-color: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color);
 }
 
 [data-bs-theme="dark"] .list-group-item {
-    background-color: var(--bs-gray-800);
+    background-color: var(--bs-gray-800); /* Or a color that fits your dark theme better */
     border-color: var(--bs-gray-700);
 }
 
 /* Modal Image Styling */
 #imageModal .modal-body img {
-    max-height: 80vh;
-    object-fit: contain;
+    max-height: 80vh; /* Image size */
+    object-fit: contain; /* Ensures the whole image is visible without cropping */
 }

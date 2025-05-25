@@ -3,7 +3,7 @@
     'use strict';
 
     const THEME_KEY = 'theme_preference';
-    const rootElement = document.documentElement;
+    const rootElement = document.documentElement; // Target <html> for data-bs-theme
     const themeToggler = document.getElementById('theme-toggler');
     const sunIcon = document.querySelector('.theme-icon-sun');
     const moonIcon = document.querySelector('.theme-icon-moon');
@@ -114,6 +114,7 @@
     const imageModal = document.getElementById('imageModal');
     if (imageModal) {
         const modalImage = document.getElementById('modalImage');
+        // const modalTitle = imageModal.querySelector('.modal-title'); // Uncomment if you want to change title
 
         imageModal.addEventListener('show.bs.modal', function (event) {
             // Button that triggered the modal
@@ -130,9 +131,13 @@
                 modalImage.setAttribute('src', imageSource);
             }
             if (modalImage && imageAlt) {
-                modalImage.setAttribute('alt', imageAlt + " (nagyított)");
+                modalImage.setAttribute('alt', imageAlt + " (nagyított)"); // Append to alt text
             }
             
+            // Optional: Update modal title if you want to use the image alt text as title
+            // if (modalTitle && imageAlt) {
+            //    modalTitle.textContent = imageAlt;
+            // }
         });
     }
 })();

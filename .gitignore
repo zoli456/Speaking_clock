@@ -5,7 +5,6 @@
 
 #Secrets
 Secrets.cs
-credentials.json
 
 # User-specific files
 *.rsuser
@@ -14,6 +13,14 @@ credentials.json
 *.userosscache
 *.sln.docstates
 *.ttf
+logos_final.json
+QuestionData.json
+credentials.json
+countries.json
+
+Speaking_Clock/Assets/Flags/*.png
+Speaking_Clock/Assets/MoonIcons/*.png
+Speaking_Clock/Assets/WeatherIcons/*.png
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

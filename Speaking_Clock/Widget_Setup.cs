@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using Speaking_Clock;
 using Speaking_clock.Widgets;
+using Speaking_Clock.Widgets;
+using Beallitasok = Speaking_Clock.Beallitasok;
 
 namespace Speaking_clock;
 
@@ -294,6 +296,14 @@ public partial class WidgetSetup : Form
 
         DaystextBox.Text = Beallitasok.WidgetSection["Időjárás_Napok"].StringValue;
 
+        MinesweepercheckBox.Checked = Beallitasok.WidgetSection["Aknakereső_Bekapcsolva"].BoolValue;
+
+        FlagcheckBox.Checked = Beallitasok.WidgetSection["Zászló_Bekapcsolva"].BoolValue;
+
+        QuizcheckBox.Checked = Beallitasok.WidgetSection["Quiz_Bekapcsolva"].BoolValue;
+
+        LogocheckBox.Checked = Beallitasok.WidgetSection["Logo_Bekapcsolva"].BoolValue;
+
         initalized = true;
     }
 
@@ -506,5 +516,73 @@ public partial class WidgetSetup : Form
             Beallitasok.WidgetSection["Időjárás_Napok"].IntValue = 0;
             DaystextBox.Text = "0";
         }
+    }
+
+    private void MinesweepercheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        if (!initalized) return;
+        Debug.WriteLine($"Aknakereső: {MinesweepercheckBox.Checked}");
+        Beallitasok.WidgetSection["Aknakereső_Bekapcsolva"].BoolValue = MinesweepercheckBox.Checked;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+        if (Beallitasok.WidgetSection["Aknakereső_Bekapcsolva"].BoolValue &&
+            (Beallitasok.minesweeperForm == null || Beallitasok.minesweeperForm.IsDisposed))
+            Beallitasok.minesweeperForm = new Minesweeper(Beallitasok.WidgetSection["Aknakereső_X"].IntValue,
+                Beallitasok.WidgetSection["Aknakereső_Y"].IntValue);
+        else
+            Beallitasok.minesweeperForm?.Dispose();
+        initalized = false;
+        Focus();
+        initalized = true;
+    }
+
+    private void FlagcheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        if (!initalized) return;
+        Debug.WriteLine($"Zászló: {FlagcheckBox.Checked}");
+        Beallitasok.WidgetSection["Zászló_Bekapcsolva"].BoolValue = FlagcheckBox.Checked;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+        if (Beallitasok.WidgetSection["Zászló_Bekapcsolva"].BoolValue &&
+            (Beallitasok.flagguesserForm == null || Beallitasok.flagguesserForm.IsDisposed))
+            Beallitasok.flagguesserForm = new Flagguesser(Beallitasok.WidgetSection["Zászló_X"].IntValue,
+                Beallitasok.WidgetSection["Zászló_Y"].IntValue);
+        else
+            Beallitasok.flagguesserForm?.Dispose();
+        initalized = false;
+        Focus();
+        initalized = true;
+    }
+
+    private void QuizcheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        if (!initalized) return;
+        Debug.WriteLine($"Quiz: {QuizcheckBox.Checked}");
+        Beallitasok.WidgetSection["Quiz_Bekapcsolva"].BoolValue = QuizcheckBox.Checked;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+        if (Beallitasok.WidgetSection["Quiz_Bekapcsolva"].BoolValue &&
+            (Beallitasok.flagguesserForm == null || Beallitasok.flagguesserForm.IsDisposed))
+            Beallitasok.quizForm = new QuizWidget(Beallitasok.WidgetSection["Quiz_X"].IntValue,
+                Beallitasok.WidgetSection["Quiz_Y"].IntValue);
+        else
+            Beallitasok.quizForm?.Dispose();
+        initalized = false;
+        Focus();
+        initalized = true;
+    }
+
+    private void LogocheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        if (!initalized) return;
+        Debug.WriteLine($"Logo: {LogocheckBox.Checked}");
+        Beallitasok.WidgetSection["Logo_Bekapcsolva"].BoolValue = LogocheckBox.Checked;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+        if (Beallitasok.WidgetSection["Logo_Bekapcsolva"].BoolValue &&
+            (Beallitasok.logoGuesserForm == null || Beallitasok.logoGuesserForm.IsDisposed))
+            Beallitasok.logoGuesserForm = new LogoGuesser(Beallitasok.WidgetSection["Logo_X"].IntValue,
+                Beallitasok.WidgetSection["Logo_Y"].IntValue);
+        else
+            Beallitasok.logoGuesserForm?.Dispose();
+        initalized = false;
+        Focus();
+        initalized = true;
     }
 }

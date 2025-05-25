@@ -67,10 +67,14 @@
             AnalogClockcheckBox = new CheckBox();
             NamedaycheckBox = new CheckBox();
             groupBox3 = new GroupBox();
+            QuizcheckBox = new CheckBox();
+            FlagcheckBox = new CheckBox();
+            MinesweepercheckBox = new CheckBox();
             label15 = new Label();
             DaystextBox = new TextBox();
             WeathercheckBox = new CheckBox();
             RadiocheckBox = new CheckBox();
+            LogocheckBox = new CheckBox();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             groupBox3.SuspendLayout();
@@ -494,6 +498,10 @@
             // 
             // groupBox3
             // 
+            groupBox3.Controls.Add(LogocheckBox);
+            groupBox3.Controls.Add(QuizcheckBox);
+            groupBox3.Controls.Add(FlagcheckBox);
+            groupBox3.Controls.Add(MinesweepercheckBox);
             groupBox3.Controls.Add(label15);
             groupBox3.Controls.Add(DaystextBox);
             groupBox3.Controls.Add(WeathercheckBox);
@@ -505,6 +513,42 @@
             groupBox3.TabIndex = 27;
             groupBox3.TabStop = false;
             groupBox3.Text = "Egyéb";
+            // 
+            // QuizcheckBox
+            // 
+            QuizcheckBox.AutoSize = true;
+            QuizcheckBox.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+            QuizcheckBox.Location = new Point(342, 60);
+            QuizcheckBox.Name = "QuizcheckBox";
+            QuizcheckBox.Size = new Size(55, 21);
+            QuizcheckBox.TabIndex = 35;
+            QuizcheckBox.Text = "Quiz";
+            QuizcheckBox.UseVisualStyleBackColor = true;
+            QuizcheckBox.CheckedChanged += QuizcheckBox_CheckedChanged;
+            // 
+            // FlagcheckBox
+            // 
+            FlagcheckBox.AutoSize = true;
+            FlagcheckBox.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+            FlagcheckBox.Location = new Point(342, 25);
+            FlagcheckBox.Name = "FlagcheckBox";
+            FlagcheckBox.Size = new Size(73, 21);
+            FlagcheckBox.TabIndex = 34;
+            FlagcheckBox.Text = "Zászlók";
+            FlagcheckBox.UseVisualStyleBackColor = true;
+            FlagcheckBox.CheckedChanged += FlagcheckBox_CheckedChanged;
+            // 
+            // MinesweepercheckBox
+            // 
+            MinesweepercheckBox.AutoSize = true;
+            MinesweepercheckBox.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+            MinesweepercheckBox.Location = new Point(148, 60);
+            MinesweepercheckBox.Name = "MinesweepercheckBox";
+            MinesweepercheckBox.Size = new Size(98, 21);
+            MinesweepercheckBox.TabIndex = 33;
+            MinesweepercheckBox.Text = "Aknakereső";
+            MinesweepercheckBox.UseVisualStyleBackColor = true;
+            MinesweepercheckBox.CheckedChanged += MinesweepercheckBox_CheckedChanged;
             // 
             // label15
             // 
@@ -546,6 +590,18 @@
             RadiocheckBox.Text = "Rádió";
             RadiocheckBox.UseVisualStyleBackColor = true;
             RadiocheckBox.CheckedChanged += RadiocheckBox_CheckedChanged;
+            // 
+            // LogocheckBox
+            // 
+            LogocheckBox.AutoSize = true;
+            LogocheckBox.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+            LogocheckBox.Location = new Point(463, 22);
+            LogocheckBox.Name = "LogocheckBox";
+            LogocheckBox.Size = new Size(65, 21);
+            LogocheckBox.TabIndex = 36;
+            LogocheckBox.Text = "Logók";
+            LogocheckBox.UseVisualStyleBackColor = true;
+            LogocheckBox.CheckedChanged += LogocheckBox_CheckedChanged;
             // 
             // WidgetSetup
             // 
@@ -621,5 +677,9 @@
         private CheckBox WeathercheckBox;
         private Label label15;
         private TextBox DaystextBox;
+        private CheckBox MinesweepercheckBox;
+        private CheckBox FlagcheckBox;
+        private CheckBox QuizcheckBox;
+        private CheckBox LogocheckBox;
     }
 }

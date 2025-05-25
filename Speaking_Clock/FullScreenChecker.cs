@@ -71,5 +71,4 @@ internal static class FullScreenChecker
                && windowRect.Right >= monRect.Right
                && windowRect.Bottom >= monRect.Bottom;
     }
-
 }
