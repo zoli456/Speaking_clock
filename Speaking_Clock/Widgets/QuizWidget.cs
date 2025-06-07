@@ -22,6 +22,7 @@ public class QuizItem
     [JsonPropertyName("B")] public string B { get; set; }
     [JsonPropertyName("C")] public string C { get; set; }
     [JsonPropertyName("D")] public string D { get; set; }
+
     [JsonPropertyName("Valasz")] public string Valasz { get; set; } // Should be "A", "B", "C", or "D"
     //[JsonPropertyName("Kategoria")] public string Kategoria { get; set; }
 }
@@ -54,6 +55,7 @@ public class QuizWidget : RenderForm
     private ID2D1SolidColorBrush _minimizeButtonBrush;
     private RectangleF _minimizeButtonRect;
     private Point _mouseDownLocation;
+    private ID2D1SolidColorBrush _questionBackgroundBrush;
     private ID2D1HwndRenderTarget _renderTarget;
     private int _selectedIndex = -1;
 
@@ -135,14 +137,16 @@ public class QuizWidget : RenderForm
 
         _textFormatOptions?.Dispose();
         _textFormatOptions =
-            _dwriteFactory.CreateTextFormat("Segoe UI", FontWeight.SemiBold, FontStyle.Normal, FontStretch.Normal, 16);
+            _dwriteFactory.CreateTextFormat("Segoe UI", FontWeight.SemiBold, FontStyle.Normal, FontStretch.Normal,
+                16);
         _textFormatOptions.TextAlignment = TextAlignment.Center;
         _textFormatOptions.ParagraphAlignment = ParagraphAlignment.Center;
         _textFormatOptions.WordWrapping = WordWrapping.Wrap;
 
         _textFormatScore?.Dispose();
         _textFormatScore =
-            _dwriteFactory.CreateTextFormat("Segoe UI", FontWeight.Normal, FontStyle.Normal, FontStretch.Normal, 14);
+            _dwriteFactory.CreateTextFormat("Segoe UI", FontWeight.Normal, FontStyle.Normal, FontStretch.Normal,
+                14);
         _textFormatScore.TextAlignment = TextAlignment.Center;
         _textFormatScore.ParagraphAlignment = ParagraphAlignment.Center;
     }
@@ -171,32 +175,38 @@ public class QuizWidget : RenderForm
         _borderBrush?.Dispose();
         _startButtonBrush?.Dispose();
         _minimizeButtonBrush?.Dispose();
+        _questionBackgroundBrush?.Dispose();
 
         if (_renderTarget == null) return;
 
         _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.White.ToArgb()));
         _buttonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 60, 60, 65).ToArgb()));
         _correctBrush =
-            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 34, 139, 34).ToArgb())); // ForestGreen
+            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 34, 139, 34)
+                .ToArgb())); // ForestGreen
         _incorrectBrush =
             _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 178, 34, 34).ToArgb())); // Firebrick
         _borderBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 90, 90, 95).ToArgb()));
-        _startButtonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 70, 70, 75).ToArgb()));
+        _startButtonBrush =
+            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 70, 70, 75).ToArgb()));
         _minimizeButtonBrush =
             _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 80, 80, 85).ToArgb()));
+        _questionBackgroundBrush =
+            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 45, 45, 50)
+                .ToArgb()));
     }
 
     private async void LoadQuizDataAsync()
     {
         try
         {
-            using var rs = Assembly.GetExecutingAssembly()
-                               .GetManifestResourceStream(
-                                   "Speaking_clock.QuestionData.json")
-                           ?? throw new FileNotFoundException("Quiz data resource (QuestionData.json) not found!");
+            var resourceName = "Speaking_clock.QuestionData.json";
+
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)
+                               ?? throw new FileNotFoundException($"Could not load embedded resource: {resourceName}");
 
             string jsonText;
-            using (var rdr = new StreamReader(rs))
+            using (var rdr = new StreamReader(stream))
             {
                 jsonText = await rdr.ReadToEndAsync();
             }
@@ -216,7 +226,6 @@ public class QuizWidget : RenderForm
                 return;
             }
 
-            // Filter for questions that have all necessary parts
             _allQuestions = _allQuestions.Where(q =>
                 !string.IsNullOrWhiteSpace(q.Kerdes) &&
                 !string.IsNullOrWhiteSpace(q.A) &&
@@ -243,13 +252,14 @@ public class QuizWidget : RenderForm
             }
             else
             {
-                _gameState = GameState.Minimized;
+                _gameState = GameState.Minimized; // Or Initializing if you want to show loading briefly
                 Invalidate();
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error loading quiz data: {ex.Message}\n{ex.StackTrace}", "Error", MessageBoxButtons.OK,
+            MessageBox.Show($"Error loading quiz data: {ex.Message}\n{ex.StackTrace}", "Error",
+                MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
             _gameState = GameState.Error;
             Invalidate();
@@ -260,7 +270,11 @@ public class QuizWidget : RenderForm
     {
         if (_allQuestions == null || _allQuestions.Count == 0)
         {
-            _gameState = GameState.Error;
+            // Attempt to reload data if it's missing and we are trying to start a round
+            if (_gameState != GameState.Error && _gameState != GameState.Initializing)
+                LoadQuizDataAsync(); // This will set to Error if it fails again
+            else if
+                (_gameState != GameState.Error) _gameState = GameState.Error; // If already tried loading and failed
             Invalidate();
             return;
         }
@@ -278,7 +292,7 @@ public class QuizWidget : RenderForm
         _currentOptionTexts.Add(_currentQuestion.D);
 
         _gameState = GameState.ShowingQuestion;
-        Invalidate(); // Redraw with new question and options
+        Invalidate();
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -300,7 +314,7 @@ public class QuizWidget : RenderForm
                     DrawCenteredText(_renderTarget, "Initializing Quiz...", ClientRectangle, _textFormatOptions);
                     break;
                 case GameState.Error:
-                    DrawCenteredText(_renderTarget, "An error occurred. Please restart.", ClientRectangle,
+                    DrawCenteredText(_renderTarget, "An error occurred. Please check data.", ClientRectangle,
                         _textFormatOptions);
                     break;
                 case GameState.ShowingQuestion:
@@ -321,7 +335,7 @@ public class QuizWidget : RenderForm
 
     private void DrawCenteredText(ID2D1RenderTarget rt, string text, RectangleF bounds, IDWriteTextFormat format)
     {
-        if (format != null && _textBrush != null)
+        if (format != null && _textBrush != null && !string.IsNullOrEmpty(text))
             rt.DrawText(text, format, (Rect)bounds, _textBrush);
     }
 
@@ -355,17 +369,33 @@ public class QuizWidget : RenderForm
 
         // Draw Question Text
         var questionTopY = topMargin + scoreDisplayHeight + spacing;
-        var questionHeight = Height * 0.25f; // Allocate ~25% of height for question
-        var questionRect = new RectangleF(questionAreaPadding, questionTopY, Width - questionAreaPadding * 2,
-            questionHeight);
+        var questionHeight = Height * 0.25f;
+        var questionBackgroundRect = new RectangleF(questionAreaPadding, questionTopY,
+            Width - questionAreaPadding * 2, questionHeight);
+
+        // Fill background for the question area
+        if (_questionBackgroundBrush != null) rt.FillRectangle(questionBackgroundRect, _questionBackgroundBrush);
+        // Draw border for the question background
+        if (_borderBrush != null) rt.DrawRectangle(questionBackgroundRect, _borderBrush, 1.5f);
+
+        // Create a slightly smaller rect for the text to give padding inside the background
+        var textPadding = 5f; // Internal padding of 5 pixels
+        var questionTextLayoutRect = new RectangleF(
+            questionBackgroundRect.Left + textPadding,
+            questionBackgroundRect.Top + textPadding,
+            questionBackgroundRect.Width - textPadding * 2,
+            questionBackgroundRect.Height - textPadding * 2
+        );
 
         if (_currentQuestion != null)
-            DrawTextInRect(rt, _currentQuestion.Kerdes, questionRect, _textFormatQuestion, _textBrush);
+            DrawTextInRect(rt, _currentQuestion.Kerdes, questionTextLayoutRect, _textFormatQuestion, _textBrush);
         else
-            DrawTextInRect(rt, "Loading question...", questionRect, _textFormatQuestion, _textBrush);
+            DrawTextInRect(rt, "Loading question...", questionTextLayoutRect, _textFormatQuestion, _textBrush);
+
 
         // Draw Options
-        var buttonsTopY = questionRect.Bottom + spacing * 1.5f;
+        var buttonsTopY =
+            questionBackgroundRect.Bottom + spacing * 1.5f;
         var availableHeightForButtons = Height - buttonsTopY - spacing - MinimizeButtonPadding;
         var buttonHeight = (availableHeightForButtons - (NumOptions - 1) * spacing) / NumOptions;
         buttonHeight = Math.Max(35f, Math.Min(buttonHeight, 60f));
@@ -381,11 +411,11 @@ public class QuizWidget : RenderForm
             if (_showResultFeedback && _currentQuestion != null)
             {
                 var correctVal = _currentQuestion.Valasz.ToUpper();
-                var optionLetter = ((char)('A' + i)).ToString(); // A, B, C, D
+                var optionLetter = ((char)('A' + i)).ToString();
 
                 if (optionLetter == correctVal)
                     currentOptionBrush = _correctBrush;
-                else if (i == _selectedIndex) // If this was the wrong selected index
+                else if (i == _selectedIndex)
                     currentOptionBrush = _incorrectBrush;
             }
 
@@ -395,7 +425,6 @@ public class QuizWidget : RenderForm
                 rt.DrawRectangle(_optionRects[i], _borderBrush, 1.5f);
 
             var optionText = _currentOptionTexts.Count > i ? _currentOptionTexts[i] : "N/A";
-            // Prefix with A), B), C), D)
             optionText = $"{(char)('A' + i)}) {optionText}";
             DrawTextInRect(rt, optionText, _optionRects[i], _textFormatOptions, _textBrush);
             currentY += buttonHeight + spacing;
@@ -405,33 +434,38 @@ public class QuizWidget : RenderForm
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
-        CreateRenderTarget();
+        if (IsHandleCreated && ClientRectangle.Width > 0 && ClientRectangle.Height > 0) CreateRenderTarget();
         Invalidate();
     }
 
     private void Widget_MouseDown(object sender, MouseEventArgs e)
     {
-        if (e.Button == MouseButtons.Left && _minimizeButtonRect.Contains(e.Location) && !_isMinimized)
-            // Allow click on minimize without triggering drag
+        if (e.Button == MouseButtons.Left && !_isMinimized && _minimizeButtonRect.Contains(e.Location))
+            // Click on minimize button, don't start drag.
             return;
 
-        var buttonForDrag = _isMinimized ? MouseButtons.Right : MouseButtons.Left;
-        // Allow dragging with right mouse when minimized, or left mouse on question area when expanded
-        if (e.Button == buttonForDrag && (Beallitasok.RSS_Reader_Section?["Húzás"]?.BoolValue ?? true))
+        var canDrag = Beallitasok.RSS_Reader_Section?["Húzás"]?.BoolValue ?? true;
+        if (!canDrag) return;
+
+        if (_isMinimized && e.Button == MouseButtons.Right) // Drag minimized with Right Mouse
         {
-            if (_isMinimized) // If minimized, entire widget is draggable with right mouse
+            _isDragging = true;
+            _mouseDownLocation = e.Location;
+        }
+        else if (!_isMinimized && e.Button == MouseButtons.Left) // Drag expanded with Left Mouse on specific areas
+        {
+            // Allow dragging by clicking the question area or score area
+            var draggableAreaTop = MinimizeButtonSize + MinimizeButtonPadding * 2;
+            var draggableHeight = Height * 0.25f + 30f + 10f; // Approx height of score + question + spacing
+            var questionAreaRect =
+                GetQuestionAreaRect();
+
+            if (questionAreaRect.Contains(e.Location) ||
+                new RectangleF(0, 0, Width, draggableAreaTop + draggableHeight)
+                    .Contains(e.Location)) // Broader drag area
             {
                 _isDragging = true;
                 _mouseDownLocation = e.Location;
-            }
-            else // If expanded, allow dragging by clicking the question area
-            {
-                var questionAreaRect = GetQuestionAreaRect();
-                if (questionAreaRect.Contains(e.Location))
-                {
-                    _isDragging = true;
-                    _mouseDownLocation = e.Location;
-                }
             }
         }
     }
@@ -443,8 +477,8 @@ public class QuizWidget : RenderForm
         var spacing = 10f;
         var questionAreaPadding = Width * 0.05f;
         var questionTopY = topMargin + scoreDisplayHeight + spacing;
-        var questionHeight = Height * 0.25f;
-        return new RectangleF(questionAreaPadding, questionTopY, Width - questionAreaPadding * 2, questionHeight);
+        var questionHeight = Height * 0.25f; 
+        return new RectangleF(questionAreaPadding, questionTopY, Width - questionAreaPadding * 2, questionHeight); // The background rectangle
     }
 
 
@@ -522,6 +556,7 @@ public class QuizWidget : RenderForm
             _borderBrush?.Dispose();
             _minimizeButtonBrush?.Dispose();
             _startButtonBrush?.Dispose();
+            _questionBackgroundBrush?.Dispose();
 
             _textFormatQuestion?.Dispose();
             _textFormatOptions?.Dispose();
@@ -538,8 +573,12 @@ public class QuizWidget : RenderForm
     {
         _startButtonRect = new RectangleF(10, 10, Width - 20, Height - 20);
 
-        rt.FillRectangle(_startButtonRect, _startButtonBrush);
-        rt.DrawRectangle(_startButtonRect, _borderBrush, 1.5f);
+        if (_startButtonBrush != null && _borderBrush != null)
+        {
+            rt.FillRectangle(_startButtonRect, _startButtonBrush);
+            rt.DrawRectangle(_startButtonRect, _borderBrush, 1.5f);
+        }
+
 
         DrawCenteredText(rt, "Quiz", _startButtonRect, _textFormatOptions);
     }
@@ -549,8 +588,19 @@ public class QuizWidget : RenderForm
         _isMinimized = false;
         Width = 420;
         Height = 550;
-        Invalidate();
-        StartNewRound(); // Load and display the first question
+        if (_allQuestions == null || (_allQuestions.Count == 0 && _gameState != GameState.Error))
+        {
+            _gameState = GameState.Initializing; // Show initializing while loading data
+            LoadQuizDataAsync();
+        }
+        else if (_gameState != GameState.Error)
+        {
+            StartNewRound();
+        }
+        else
+        {
+            Invalidate(); // If error, just redraw in expanded error state.
+        }
     }
 
     private void MinimizeToButton()
@@ -559,7 +609,6 @@ public class QuizWidget : RenderForm
         _gameState = GameState.Minimized;
         Width = 200;
         Height = 60;
-        Invalidate();
     }
 
     private enum GameState

@@ -204,7 +204,7 @@ public class LogoGuesser : RenderForm
     {
         try
         {
-            var resourceName = "Speaking_clock.logos_final.json"; // Make sure this matches your project structure
+            var resourceName = "Speaking_clock.logos_final.json";
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
             if (stream == null)
             {
