@@ -15,8 +15,7 @@ internal partial class Nevjegy : Form
 #endif
         labelCopyright.Text = AssemblyCopyright;
         labelCompanyName.Text = AssemblyCompany;
-        textBoxDescription.Text =
-            $"Nem csak egy beszélő óra{Environment.NewLine}Weboldal: www.beszeloora.infy.uk"; //AssemblyDescription;
+        textBoxDescription.Text = AssemblyDescription;
 #if RELEASE
         //TopMost = true;
 #endif
