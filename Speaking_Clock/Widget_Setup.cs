@@ -559,7 +559,7 @@ public partial class WidgetSetup : Form
         Beallitasok.WidgetSection["Quiz_Bekapcsolva"].BoolValue = QuizcheckBox.Checked;
         Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         if (Beallitasok.WidgetSection["Quiz_Bekapcsolva"].BoolValue &&
-            (Beallitasok.flagguesserForm == null || Beallitasok.flagguesserForm.IsDisposed))
+            (Beallitasok.quizForm == null || Beallitasok.quizForm.IsDisposed))
             Beallitasok.quizForm = new QuizWidget(Beallitasok.WidgetSection["Quiz_X"].IntValue,
                 Beallitasok.WidgetSection["Quiz_Y"].IntValue);
         else
