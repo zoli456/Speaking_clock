@@ -32,7 +32,7 @@ public class LogoGuesser : RenderForm
     private const float MinimizeButtonSize = 30f;
     private const float MinimizeButtonPadding = 5f;
     private readonly Timer _nextRoundTimer;
-    private readonly Random _random = new();
+    private readonly Random _random = new((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
     private List<LogoData> _allLogos;
     private HashSet<char> _alreadyGuessedChars;

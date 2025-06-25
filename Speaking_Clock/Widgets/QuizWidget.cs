@@ -36,7 +36,7 @@ public class QuizWidget : RenderForm
     private readonly Timer _nextRoundTimer;
 
     private readonly RectangleF[] _optionRects;
-    private readonly Random _random = new();
+    private readonly Random _random = new((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
     private List<QuizItem> _allQuestions;
     private ID2D1SolidColorBrush _borderBrush;

@@ -75,7 +75,7 @@ public class MinesweeperGame
 
     public void InitializeBoardAndPlaceMines(int initialSafeRow, int initialSafeCol)
     {
-        var rand = new Random();
+        var rand = new Random((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         var minesPlaced = 0;
         while (minesPlaced < MinesCount)
         {
