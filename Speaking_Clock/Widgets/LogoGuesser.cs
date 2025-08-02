@@ -8,12 +8,15 @@ using Vanara.PInvoke;
 using Vortice;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WIC;
 using Vortice.WinForms;
+using AlphaMode = Vortice.DCommon.AlphaMode;
 using BitmapInterpolationMode = Vortice.Direct2D1.BitmapInterpolationMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
+using PixelFormat = Vortice.DCommon.PixelFormat;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Speaking_Clock.Widgets;
@@ -164,16 +167,25 @@ public class LogoGuesser : RenderForm
         _renderTarget?.Dispose();
         if (Width == 0 || Height == 0) return;
 
-        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(
-            new RenderTargetProperties(),
-            new HwndRenderTargetProperties
-            {
-                Hwnd = Handle,
-                PixelSize = new SizeI(Width, Height),
-                PresentOptions =
-                    PresentOptions
-                        .None
-            });
+        var rtProps = new RenderTargetProperties
+        {
+            Type = RenderTargetType.Hardware,
+            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
+            DpiX = 96f,
+            DpiY = 96f,
+            Usage = RenderTargetUsage.GdiCompatible,
+            MinLevel = FeatureLevel.Level_9
+        };
+
+        var hwndProps = new HwndRenderTargetProperties
+        {
+            Hwnd = Handle,
+            PixelSize = new SizeI(Width, Height),
+            PresentOptions = PresentOptions.None
+        };
+
+        _renderTarget = GraphicsFactories.D2DFactory
+            .CreateHwndRenderTarget(rtProps, hwndProps);
         CreateDeviceDependentResources();
     }
 
@@ -333,7 +345,8 @@ public class LogoGuesser : RenderForm
         using var wicBitmapDecoder = wicFactory.CreateDecoderFromStream(stream);
         using var wicFrameDecode = wicBitmapDecoder.GetFrame(0);
         using var wicConverter = wicFactory.CreateFormatConverter();
-        wicConverter.Initialize(wicFrameDecode, PixelFormat.Format32bppPBGRA, BitmapDitherType.None, null, 0.0,
+        wicConverter.Initialize(wicFrameDecode, Vortice.WIC.PixelFormat.Format32bppPBGRA, BitmapDitherType.None, null,
+            0.0,
             BitmapPaletteType.MedianCut);
         return renderTarget.CreateBitmapFromWicBitmap(wicConverter);
     }
@@ -498,19 +511,20 @@ public class LogoGuesser : RenderForm
             if (e.Button == MouseButtons.Right && _isMinimized)
             {
                 var dragRect = new RectangleF(0, 0, Width, MinimizeButtonSize);
-                if (dragRect.Contains(e.Location) )
+                if (dragRect.Contains(e.Location))
                 {
                     _isDragging = true;
                     _mouseDownLocation = e.Location;
                 }
+
                 return;
             }
 
-            if (!_isMinimized && e.Button == MouseButtons.Left && !_minimizeButtonRect.Contains(e.Location) && !_skipButtonRect.Contains(e.Location))
+            if (!_isMinimized && e.Button == MouseButtons.Left && !_minimizeButtonRect.Contains(e.Location) &&
+                !_skipButtonRect.Contains(e.Location))
             {
                 _isDragging = true;
                 _mouseDownLocation = e.Location;
-                return;
             }
         }
     }
@@ -552,7 +566,6 @@ public class LogoGuesser : RenderForm
             Beallitasok.WidgetSection["Logo_X"].IntValue = Left;
             Beallitasok.WidgetSection["Logo_Y"].IntValue = Top;
             Beallitasok.ConfigParser.SaveToFile(Path.Combine(Beallitasok.BasePath, Beallitasok.SetttingsFileName));
-            return;
         }
     }
 

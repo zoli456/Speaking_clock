@@ -8,15 +8,17 @@ using SharpGen.Runtime;
 using Speaking_Clock;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WIC;
 using Vortice.WinForms;
 using static Vanara.PInvoke.User32;
+using AlphaMode = Vortice.DCommon.AlphaMode;
 using BitmapInterpolationMode = Vortice.Direct2D1.BitmapInterpolationMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
+using PixelFormat = Vortice.DCommon.PixelFormat;
 using Size = System.Drawing.Size;
-using TextAntialiasMode = Vortice.Direct2D1.TextAntialiasMode;
 
 namespace Speaking_clock.Widgets;
 
@@ -173,7 +175,7 @@ public class WeatherWidget : RenderForm
             return;
         }
 
-        string[] centuryGothicFiles = new[]
+        var centuryGothicFiles = new[]
         {
             $"{Beallitasok.BasePath}\\Assets\\Fonts\\gothic.ttf",
             $"{Beallitasok.BasePath}\\Assets\\Fonts\\gothicb.ttf",
@@ -224,19 +226,25 @@ public class WeatherWidget : RenderForm
     private void CreateRenderTarget()
     {
         _renderTarget?.Dispose();
-        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(
-            new RenderTargetProperties(),
-            new HwndRenderTargetProperties
-            {
-                Hwnd = Handle,
-                PixelSize = new SizeI(ClientSize.Width, ClientSize.Height),
-                PresentOptions = PresentOptions.None
-            });
-        if (_renderTarget != null)
+        var rtProps = new RenderTargetProperties
         {
-            _renderTarget.SetDpi(96.0f, 96.0f);
-            _renderTarget.TextAntialiasMode = TextAntialiasMode.Cleartype;
-        }
+            Type = RenderTargetType.Hardware,
+            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
+            DpiX = 96f,
+            DpiY = 96f,
+            Usage = RenderTargetUsage.GdiCompatible,
+            MinLevel = FeatureLevel.Level_9
+        };
+
+        var hwndProps = new HwndRenderTargetProperties
+        {
+            Hwnd = Handle,
+            PixelSize = new SizeI(Width, Height),
+            PresentOptions = PresentOptions.None
+        };
+
+        _renderTarget = GraphicsFactories.D2DFactory
+            .CreateHwndRenderTarget(rtProps, hwndProps);
     }
 
     private void CreateDeviceDependentResources()
@@ -385,7 +393,7 @@ public class WeatherWidget : RenderForm
             using var decoder = GraphicsFactories.WicFactory.CreateDecoderFromFileName(pathToLoad);
             using var frame = decoder.GetFrame(0);
             using var converter = GraphicsFactories.WicFactory.CreateFormatConverter();
-            converter.Initialize(frame, PixelFormat.Format32bppPBGRA, BitmapDitherType.None, null, 0,
+            converter.Initialize(frame, Vortice.WIC.PixelFormat.Format32bppPBGRA, BitmapDitherType.None, null, 0,
                 BitmapPaletteType.MedianCut);
             var bitmap = _renderTarget.CreateBitmapFromWicBitmap(converter);
             Debug.WriteLine($"Successfully loaded bitmap from '{pathToLoad}'");

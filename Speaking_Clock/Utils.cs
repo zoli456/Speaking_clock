@@ -119,7 +119,7 @@ internal class Utils
             throw new ArgumentException("Process name cannot be null or empty.", nameof(processName));
 
         // 1. Get the Process IDs for the given process name
-        Process[] processes = Process.GetProcessesByName(processName);
+        var processes = Process.GetProcessesByName(processName);
         if (processes.Length == 0)
         {
             Debug.WriteLine($"No process found with the name: {processName}");

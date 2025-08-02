@@ -2,10 +2,13 @@
 using System.Numerics;
 using Speaking_Clock;
 using Speaking_clock.Widgets;
+using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WinForms;
+using AlphaMode = Vortice.DCommon.AlphaMode;
 using D2DColor = Vortice.Mathematics.Color4;
 using DrawingColor = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
@@ -63,14 +66,25 @@ public class CalendarWidget : RenderForm, IDisposable
         _displayDate = DateTime.Now;
         _yearOfLastHolidayCalculation = _displayDate.Year;
 
-        var renderProperties = new HwndRenderTargetProperties
+        var rtProps = new RenderTargetProperties
+        {
+            Type = RenderTargetType.Hardware,
+            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
+            DpiX = 96f,
+            DpiY = 96f,
+            Usage = RenderTargetUsage.GdiCompatible,
+            MinLevel = FeatureLevel.Level_9
+        };
+
+        var hwndProps = new HwndRenderTargetProperties
         {
             Hwnd = Handle,
             PixelSize = new SizeI(Width, Height),
             PresentOptions = PresentOptions.None
         };
-        _renderTarget =
-            GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(), renderProperties);
+
+        _renderTarget = GraphicsFactories.D2DFactory
+            .CreateHwndRenderTarget(rtProps, hwndProps);
 
         _defaultTextBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1, 1, 1, 0.9f)); // White
         _currentDayBrush = _renderTarget.CreateSolidColorBrush(new D2DColor(1, 0.6f, 0, 0.9f)); // Orange

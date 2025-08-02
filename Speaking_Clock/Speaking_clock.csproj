@@ -12,7 +12,7 @@
 		<Description>Egy egyszerű beszélő óra Windows rendszerekre. Az idők alatt rengeteg egyébb funkció került bele.
 Weboldal: www.beszeloora.infy.uk
 Discord: zolsana</Description>
-		<Version>1.4.1.0</Version>
+		<Version>1.4.3.0</Version>
 		<AssemblyVersion>$(Version)</AssemblyVersion>
 		<FileVersion>$(Version)</FileVersion>
 		<LangVersion>latest</LangVersion>

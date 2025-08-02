@@ -3,12 +3,15 @@ using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Xml;
 using Speaking_Clock;
+using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WinForms;
 using Timer = System.Timers.Timer;
 using static Vanara.PInvoke.User32;
+using AlphaMode = Vortice.DCommon.AlphaMode;
 using Color = System.Drawing.Color;
 using RectangleF = System.Drawing.RectangleF;
 using Size = System.Drawing.Size;
@@ -347,13 +350,25 @@ internal class RssReader : RenderForm
         _listItemTextFormat?.Dispose();
 
 
-        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(new RenderTargetProperties(),
-            new HwndRenderTargetProperties
-            {
-                Hwnd = Handle,
-                PixelSize = new SizeI(ClientSize.Width, ClientSize.Height),
-                PresentOptions = PresentOptions.None
-            });
+        var rtProps = new RenderTargetProperties
+        {
+            Type = RenderTargetType.Hardware,
+            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
+            DpiX = 96f,
+            DpiY = 96f,
+            Usage = RenderTargetUsage.GdiCompatible,
+            MinLevel = FeatureLevel.Level_9
+        };
+
+        var hwndProps = new HwndRenderTargetProperties
+        {
+            Hwnd = Handle,
+            PixelSize = new SizeI(Width, Height),
+            PresentOptions = PresentOptions.None
+        };
+
+        _renderTarget = GraphicsFactories.D2DFactory
+            .CreateHwndRenderTarget(rtProps, hwndProps);
 
         // --- Brushes ---
         _defaultTextBrush = _renderTarget.CreateSolidColorBrush(ParseColor(_settings.TextColor, Colors.White));

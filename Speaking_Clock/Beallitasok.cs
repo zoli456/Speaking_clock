@@ -144,7 +144,7 @@ public partial class Beallitasok : Form
         JelenlegiIdo = DateTime.Now;
 
         var asm = Assembly.GetExecutingAssembly();
-        string[] resourceNames = asm.GetManifestResourceNames();
+        var resourceNames = asm.GetManifestResourceNames();
         Debug.WriteLine("Embedded resources:");
         foreach (var name in resourceNames) Debug.WriteLine(" • " + name);
 

@@ -2,16 +2,20 @@
 using SharpGen.Runtime;
 using Speaking_Clock;
 using Vanara.PInvoke;
+using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WinForms;
+using AlphaMode = Vortice.DCommon.AlphaMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
 using Size = System.Drawing.Size;
 using Point = System.Drawing.Point;
 using SizeI = Vortice.Mathematics.SizeI;
 using RectangleF = System.Drawing.RectangleF;
+using ResultCode = Vortice.Direct2D1.ResultCode;
 
 namespace Speaking_clock.Widgets;
 
@@ -342,16 +346,25 @@ public class Minesweeper : RenderForm
         _newGameButtonTextFormat.TextAlignment = TextAlignment.Center;
         _newGameButtonTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
 
-        var d2dFactory = GraphicsFactories.D2DFactory;
-        _renderTarget = d2dFactory.CreateHwndRenderTarget(
-            new RenderTargetProperties(),
-            new HwndRenderTargetProperties
-            {
-                Hwnd = Handle,
-                PixelSize = new SizeI(ClientSize.Width, ClientSize.Height),
-                PresentOptions = PresentOptions.None
-            });
+        var rtProps = new RenderTargetProperties
+        {
+            Type = RenderTargetType.Hardware,
+            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
+            DpiX = 96f,
+            DpiY = 96f,
+            Usage = RenderTargetUsage.GdiCompatible,
+            MinLevel = FeatureLevel.Level_9
+        };
 
+        var hwndProps = new HwndRenderTargetProperties
+        {
+            Hwnd = Handle,
+            PixelSize = new SizeI(Width, Height),
+            PresentOptions = PresentOptions.None
+        };
+
+        _renderTarget = GraphicsFactories.D2DFactory
+            .CreateHwndRenderTarget(rtProps, hwndProps);
         _lineBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.DimGray.ToArgb()));
         _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.Black.ToArgb()));
         _hiddenCellBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.LightGray.ToArgb()));

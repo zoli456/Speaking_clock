@@ -6,12 +6,15 @@ using Vanara.PInvoke;
 using Vortice;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WIC;
 using Vortice.WinForms;
+using AlphaMode = Vortice.DCommon.AlphaMode;
 using BitmapInterpolationMode = Vortice.Direct2D1.BitmapInterpolationMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
+using PixelFormat = Vortice.WIC.PixelFormat;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Speaking_clock.Widgets;
@@ -171,14 +174,26 @@ public class Flagguesser : RenderForm
     {
         _renderTarget?.Dispose();
 
-        _renderTarget = GraphicsFactories.D2DFactory.CreateHwndRenderTarget(
-            new RenderTargetProperties(),
-            new HwndRenderTargetProperties
-            {
-                Hwnd = Handle,
-                PixelSize = new SizeI(Width, Height),
-                PresentOptions = PresentOptions.None
-            });
+        var rtProps = new RenderTargetProperties
+        {
+            Type = RenderTargetType.Hardware,
+            PixelFormat = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
+            DpiX = 96f,
+            DpiY = 96f,
+            Usage = RenderTargetUsage.GdiCompatible,
+            MinLevel = FeatureLevel.Level_9
+        };
+
+        var hwndProps = new HwndRenderTargetProperties
+        {
+            Hwnd = Handle,
+            PixelSize = new SizeI(Width, Height),
+            PresentOptions = PresentOptions.None
+        };
+
+        _renderTarget = GraphicsFactories.D2DFactory
+            .CreateHwndRenderTarget(rtProps, hwndProps);
+
         CreateDeviceDependentResources();
     }
 
