@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 #include "CodeDependencies.iss"
 #define MyAppName "Beszélő óra"
-#define MyAppVersion "1.42"
+#define MyAppVersion "1.43"
 #define MyAppPublisher "Zoli456"
 #define MyAppExeName "Speaking_Clock.exe"
 

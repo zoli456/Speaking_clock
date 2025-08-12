@@ -134,12 +134,15 @@ public class TimeOverlayForm : NativeWindow, IDisposable
 
     protected override void WndProc(ref Message m)
     {
-        const int WM_DISPLAYCHANGE = 0x007E;
-        const int WM_DESTROY = (int)WindowMessage.WM_DESTROY;
-
-        if (m.Msg == WM_DISPLAYCHANGE)
-            RepositionOverlay();
-        else if (m.Msg == WM_DESTROY) Dispose();
+        switch (m.Msg)
+        {
+            case (int)WindowMessage.WM_DISPLAYCHANGE:
+                RepositionOverlay();
+                break;
+            case (int)WindowMessage.WM_DESTROY:
+                Dispose();
+                break;
+        }
 
         base.WndProc(ref m);
     }

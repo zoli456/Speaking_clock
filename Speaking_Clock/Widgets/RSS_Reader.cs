@@ -645,4 +645,18 @@ internal class RssReader : RenderForm
         Beallitasok.RSS_Reader_Section[$"Olvasó_{instanceIndex}_Pos_Y"].IntValue = top;
         Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
     }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_X"].IntValue;
+        Top = Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_Y"].IntValue;
+    }
 }

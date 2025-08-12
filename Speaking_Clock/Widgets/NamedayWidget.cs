@@ -256,4 +256,18 @@ public class NamedayWidget : RenderForm
         {
         }
     }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Névnap_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Névnap_Y"].IntValue;
+    }
 }

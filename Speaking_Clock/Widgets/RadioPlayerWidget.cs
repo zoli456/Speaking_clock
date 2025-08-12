@@ -358,4 +358,18 @@ public class RadioPlayerWidget : RenderForm
 
         base.Dispose(disposing);
     }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Rádió_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Rádió_Y"].IntValue;
+    }
 }

@@ -1,12 +1,12 @@
 ﻿using System.Numerics;
 using Speaking_Clock;
-using Vanara.PInvoke;
 using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WinForms;
+using static Vanara.PInvoke.User32;
 using AlphaMode = Vortice.DCommon.AlphaMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
@@ -72,7 +72,7 @@ public class AnalogClock : RenderForm
         get
         {
             var cp = base.CreateParams;
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+            cp.ExStyle |= (int)WindowStylesEx.WS_EX_LAYERED | (int)WindowStylesEx.WS_EX_TOOLWINDOW;
             return cp;
         }
     }
@@ -280,5 +280,19 @@ public class AnalogClock : RenderForm
         _dotBrush?.Dispose();
         _renderTarget?.Dispose();
         _timer?.Dispose();
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Analóg_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Analóg_Y"].IntValue;
     }
 }

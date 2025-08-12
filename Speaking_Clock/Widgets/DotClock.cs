@@ -1,11 +1,11 @@
 ﻿using System.Numerics;
 using Speaking_Clock;
-using Vanara.PInvoke;
 using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WinForms;
+using static Vanara.PInvoke.User32;
 using AlphaMode = Vortice.DCommon.AlphaMode;
 using Color = System.Drawing.Color;
 using Size = System.Drawing.Size;
@@ -92,7 +92,7 @@ public class DotMatrixClock : RenderForm
         {
             var cp = base.CreateParams;
             // Add layered style but avoid WS_EX_TRANSPARENT
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+            cp.ExStyle |= (int)WindowStylesEx.WS_EX_LAYERED | (int)WindowStylesEx.WS_EX_TOOLWINDOW;
             return cp;
         }
     }
@@ -372,5 +372,19 @@ public class DotMatrixClock : RenderForm
         }
 
         base.Dispose(disposing);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Pontozott_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Pontozott_Y"].IntValue;
     }
 }

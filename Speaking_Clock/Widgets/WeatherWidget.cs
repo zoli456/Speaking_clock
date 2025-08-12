@@ -1089,4 +1089,18 @@ public class WeatherWidget : RenderForm
         if (_renderTarget != null)
             _renderTarget.Resize(new SizeI(ClientSize.Width, ClientSize.Height));
     }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Időjárás_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Időjárás_Y"].IntValue;
+    }
 }

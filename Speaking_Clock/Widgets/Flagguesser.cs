@@ -665,6 +665,20 @@ public class Flagguesser : RenderForm
         Invalidate();
     }
 
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Zászló_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Zászló_Y"].IntValue;
+    }
+
     private enum GameState
     {
         Minimized,

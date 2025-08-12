@@ -14,6 +14,7 @@ using DrawingColor = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
 using TextAntialiasMode = Vortice.Direct2D1.TextAntialiasMode;
 using Timer = System.Windows.Forms.Timer;
+using static Vanara.PInvoke.User32;
 
 public class CalendarWidget : RenderForm, IDisposable
 {
@@ -376,6 +377,20 @@ public class CalendarWidget : RenderForm, IDisposable
         }
 
         return new DateTime(year, month, day);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Naptár_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Naptár_Y"].IntValue;
     }
 
     private static class CalendarLook

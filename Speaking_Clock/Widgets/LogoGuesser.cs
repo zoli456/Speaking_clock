@@ -708,6 +708,20 @@ public class LogoGuesser : RenderForm
         Invalidate();
     }
 
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Logo_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Logo_Y"].IntValue;
+    }
+
 
     private enum GameState
     {

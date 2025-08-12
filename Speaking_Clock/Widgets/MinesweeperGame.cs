@@ -678,4 +678,18 @@ public class Minesweeper : RenderForm
         if (disposing) DisposeResources();
         base.Dispose(disposing);
     }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Aknakereső_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Aknakereső_Y"].IntValue;
+    }
 }

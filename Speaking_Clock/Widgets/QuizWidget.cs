@@ -626,6 +626,20 @@ public class QuizWidget : RenderForm
         Height = 60;
     }
 
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
+            RepositionOverlay();
+
+        base.WndProc(ref m);
+    }
+
+    private void RepositionOverlay()
+    {
+        Left = Beallitasok.WidgetSection["Quiz_X"].IntValue;
+        Top = Beallitasok.WidgetSection["Quiz_Y"].IntValue;
+    }
+
     private enum GameState
     {
         Minimized,
