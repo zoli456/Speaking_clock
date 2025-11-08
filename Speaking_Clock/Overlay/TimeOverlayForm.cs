@@ -15,7 +15,7 @@ namespace Speaking_Clock;
 public class TimeOverlayForm : NativeWindow, IDisposable
 {
     private readonly int Height = 45, Width = 90;
-    private bool _isVisible = true;
+    private bool _isVisible;
     private ID2D1HwndRenderTarget _renderTarget;
     private Thread _renderThread;
     private bool _running;
@@ -34,12 +34,21 @@ public class TimeOverlayForm : NativeWindow, IDisposable
     {
         _running = false;
         _renderThread?.Join();
+
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+
+        if (Handle != IntPtr.Zero)
+        {
+            // Destroys the actual window
+            DestroyWindow(Handle);
+            ReleaseHandle();
+        }
+
         _textBrush?.Dispose();
         _textFormat?.Dispose();
         _renderTarget?.Dispose();
-        ReleaseHandle();
     }
+
 
     private void CreateOverlayWindow()
     {
@@ -67,6 +76,8 @@ public class TimeOverlayForm : NativeWindow, IDisposable
         var hwnd = safeHwnd.DangerousGetHandle();
         AssignHandle(hwnd);
         SetLayeredWindowAttributes(hwnd, 0, 255, LayeredWindowAttributes.LWA_COLORKEY);
+
+        ShowWindow(hwnd, ShowWindowCommand.SW_SHOWNA);
     }
 
     private void InitializeDirect2D()
@@ -107,10 +118,12 @@ public class TimeOverlayForm : NativeWindow, IDisposable
         while (_running)
         {
             Thread.Sleep(1000);
-            if (Beallitasok.FullScreenApplicationRunning && Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
+
+            if (Beallitasok.FullScreenApplicationRunning)
             {
                 ShowOverlay();
                 RepositionOverlay();
+
                 _renderTarget.BeginDraw();
                 _renderTarget.Clear(new Color4(0, 0, 0, 0));
 
@@ -164,7 +177,7 @@ public class TimeOverlayForm : NativeWindow, IDisposable
         if (!_isVisible)
         {
             RepositionOverlay();
-            ShowWindow(Handle, ShowWindowCommand.SW_SHOW);
+            ShowWindow(Handle, ShowWindowCommand.SW_SHOWNA);
             _isVisible = true;
         }
     }

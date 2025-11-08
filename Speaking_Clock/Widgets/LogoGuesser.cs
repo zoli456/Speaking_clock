@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using SharpCompress.Archives;
 using Speaking_clock.Widgets;
 using Vanara.PInvoke;
 using Vortice;
@@ -312,28 +313,47 @@ public class LogoGuesser : RenderForm
         _currentLogoBitmap?.Dispose();
         _currentLogoBitmap = null;
 
-        if (string.IsNullOrWhiteSpace(fileName)) return;
+        if (string.IsNullOrWhiteSpace(fileName))
+            return;
 
-        var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        var logoPath = Path.Combine(baseDirectory, "Assets", "logos", fileName);
+        try
+        {
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            var archivePath = Path.Combine(baseDirectory, "Assets", "logos", "logo.dat");
 
-        if (File.Exists(logoPath))
-            try
+            if (!File.Exists(archivePath))
             {
-                using (var stream = new FileStream(logoPath, FileMode.Open, FileAccess.Read))
-                {
-                    if (_renderTarget != null)
-                        _currentLogoBitmap = LoadBitmapFromStream(_renderTarget, stream, _wicFactory);
-                }
+                Console.WriteLine($"Logo archive not found: {archivePath}");
+                return;
+            }
 
-                if (isFullImage) _showFullLogo = true;
-            }
-            catch (Exception ex)
+            using var archive = ArchiveFactory.Open(archivePath);
+            var entry = archive.Entries
+                .FirstOrDefault(e =>
+                    !e.IsDirectory &&
+                    string.Equals(Path.GetFileName(e.Key), fileName, StringComparison.OrdinalIgnoreCase));
+
+            if (entry == null)
             {
-                Console.WriteLine($"Error reading logo file {logoPath}: {ex.Message}");
+                Console.WriteLine($"Logo '{fileName}' not found inside archive '{archivePath}'");
+                return;
             }
-        else
-            Console.WriteLine($"Logo file not found: {logoPath}");
+
+            using var memoryStream = new MemoryStream();
+            entry.WriteTo(memoryStream);
+            memoryStream.Position = 0;
+
+            if (_renderTarget != null)
+            {
+                _currentLogoBitmap = LoadBitmapFromStream(_renderTarget, memoryStream, _wicFactory);
+                if (isFullImage)
+                    _showFullLogo = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading logo '{fileName}' from archive: {ex.Message}");
+        }
 
         Invalidate();
     }

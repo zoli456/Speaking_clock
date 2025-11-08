@@ -64,11 +64,11 @@ public partial class FullScreenMenu : RadForm
         {
             if (radListControl1.SelectedIndex == Beallitasok.warningTimes.Length)
             {
-                Beallitasok.DisableCustomWarning();
+                Beallitasok.DisableCustomNotification();
             }
             else
             {
-                Beallitasok.DisableCustomWarning();
+                Beallitasok.DisableCustomNotification();
                 for (var i = 0; i < Beallitasok.warningTimes.Length; i++)
                     (Beallitasok._warnings.DropDownItems[i] as ToolStripMenuItem).Checked =
                         radListControl1.SelectedIndex == i;

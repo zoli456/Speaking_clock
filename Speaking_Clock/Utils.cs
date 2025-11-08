@@ -25,15 +25,20 @@ internal class Utils
     ///     Converts a character or key name to a hex keycode.
     /// </summary>
     /// <param name="key">Input character or key name.</param>
-    /// <returns></returns>
+    /// <returns>Hex keycode, or <c>0x00</c> if not recognized.</returns>
     internal static byte CharToHexKeyCode(string key)
     {
-        var charToKeyCodeMap = new Dictionary<string, byte>
+        if (string.IsNullOrWhiteSpace(key))
+            return 0x00;
+
+        var charToKeyCodeMap = new Dictionary<string, byte>(StringComparer.OrdinalIgnoreCase)
         {
-            // Special keys
+            // Function keys
             { "f1", 0x70 }, { "f2", 0x71 }, { "f3", 0x72 }, { "f4", 0x73 },
             { "f5", 0x74 }, { "f6", 0x75 }, { "f7", 0x76 }, { "f8", 0x77 },
             { "f9", 0x78 }, { "f10", 0x79 }, { "f11", 0x7A }, { "f12", 0x7B },
+
+            // Control/navigation
             { "esc", 0x1B }, { "enter", 0x0D }, { "space", 0x20 }, { "tab", 0x09 },
             { "shift", 0x10 }, { "ctrl", 0x11 }, { "alt", 0x12 }, { "backspace", 0x08 },
             { "capslock", 0x14 }, { "leftarrow", 0x25 }, { "uparrow", 0x26 },
@@ -44,35 +49,51 @@ internal class Utils
             { "lshift", 0xA0 }, { "rshift", 0xA1 }, { "lcontrol", 0xA2 }, { "rcontrol", 0xA3 },
             { "lalt", 0xA4 }, { "ralt", 0xA5 },
 
-            // Printable ASCII characters in lowercase
-            { "0", 0x30 }, { "1", 0x31 }, { "2", 0x32 }, { "3", 0x33 }, { "4", 0x34 }, { "5", 0x35 },
-            { "6", 0x36 }, { "7", 0x37 }, { "8", 0x38 }, { "9", 0x39 },
-            { "a", 0x41 }, { "b", 0x42 }, { "c", 0x43 }, { "d", 0x44 }, { "e", 0x45 }, { "f", 0x46 },
-            { "g", 0x47 }, { "h", 0x48 }, { "i", 0x49 }, { "j", 0x4A }, { "k", 0x4B }, { "l", 0x4C },
-            { "m", 0x4D }, { "n", 0x4E }, { "o", 0x4F }, { "p", 0x50 }, { "q", 0x51 }, { "r", 0x52 },
-            { "s", 0x53 }, { "t", 0x54 }, { "u", 0x55 }, { "v", 0x56 }, { "w", 0x57 }, { "x", 0x58 },
-            { "y", 0x59 }, { "z", 0x5A }
+            // Numbers
+            { "0", 0x30 }, { "1", 0x31 }, { "2", 0x32 }, { "3", 0x33 }, { "4", 0x34 },
+            { "5", 0x35 }, { "6", 0x36 }, { "7", 0x37 }, { "8", 0x38 }, { "9", 0x39 },
+
+            // Letters
+            { "a", 0x41 }, { "b", 0x42 }, { "c", 0x43 }, { "d", 0x44 }, { "e", 0x45 },
+            { "f", 0x46 }, { "g", 0x47 }, { "h", 0x48 }, { "i", 0x49 }, { "j", 0x4A },
+            { "k", 0x4B }, { "l", 0x4C }, { "m", 0x4D }, { "n", 0x4E }, { "o", 0x4F },
+            { "p", 0x50 }, { "q", 0x51 }, { "r", 0x52 }, { "s", 0x53 }, { "t", 0x54 },
+            { "u", 0x55 }, { "v", 0x56 }, { "w", 0x57 }, { "x", 0x58 }, { "y", 0x59 },
+            { "z", 0x5A },
+
+            // OEM keys (punctuation/symbols)
+            { ";", 0xBA }, { "semicolon", 0xBA },
+            { "=", 0xBB }, { "equals", 0xBB },
+            { ",", 0xBC }, { "comma", 0xBC },
+            { "-", 0xBD }, { "minus", 0xBD },
+            { ".", 0xBE }, { "period", 0xBE },
+            { "/", 0xBF }, { "slash", 0xBF },
+            { "`", 0xC0 }, { "backtick", 0xC0 },
+            { "[", 0xDB }, { "lbracket", 0xDB },
+            { "\\", 0xDC }, { "backslash", 0xDC },
+            { "]", 0xDD }, { "rbracket", 0xDD },
+            { "'", 0xDE }, { "quote", 0xDE },
+            { "oem8", 0xDF }
         };
 
-        // Lookup the key string in the dictionary
-        if (charToKeyCodeMap.ContainsKey(key)) return charToKeyCodeMap[key]; // Return the corresponding hex keycode
-
-        return 0x00; // Return 0x00 if the key is not recognized
+        return charToKeyCodeMap.TryGetValue(key.Trim(), out var code) ? code : (byte)0x00;
     }
 
     /// <summary>
     ///     Converts a hex keycode to a character or key name.
     /// </summary>
     /// <param name="hexKeyCode">Keycode in hexadecimal format.</param>
-    /// <returns></returns>
+    /// <returns>Key name, or <c>"unknown key"</c> if not recognized.</returns>
     internal static string HexKeyCodeToChar(byte hexKeyCode)
     {
         var keyCodeMap = new Dictionary<byte, string>
         {
-            // Special keys
+            // Function keys
             { 0x70, "f1" }, { 0x71, "f2" }, { 0x72, "f3" }, { 0x73, "f4" },
             { 0x74, "f5" }, { 0x75, "f6" }, { 0x76, "f7" }, { 0x77, "f8" },
             { 0x78, "f9" }, { 0x79, "f10" }, { 0x7A, "f11" }, { 0x7B, "f12" },
+
+            // Control/navigation
             { 0x1B, "esc" }, { 0x0D, "enter" }, { 0x20, "space" }, { 0x09, "tab" },
             { 0x10, "shift" }, { 0x11, "ctrl" }, { 0x12, "alt" }, { 0x08, "backspace" },
             { 0x14, "capslock" }, { 0x25, "leftarrow" }, { 0x26, "uparrow" },
@@ -83,20 +104,25 @@ internal class Utils
             { 0xA0, "lshift" }, { 0xA1, "rshift" }, { 0xA2, "lcontrol" }, { 0xA3, "rcontrol" },
             { 0xA4, "lalt" }, { 0xA5, "ralt" },
 
-            // Printable ASCII characters in lowercase
-            { 0x30, "0" }, { 0x31, "1" }, { 0x32, "2" }, { 0x33, "3" }, { 0x34, "4" }, { 0x35, "5" },
-            { 0x36, "6" }, { 0x37, "7" }, { 0x38, "8" }, { 0x39, "9" },
-            { 0x41, "a" }, { 0x42, "b" }, { 0x43, "c" }, { 0x44, "d" }, { 0x45, "e" }, { 0x46, "f" },
-            { 0x47, "g" }, { 0x48, "h" }, { 0x49, "i" }, { 0x4A, "j" }, { 0x4B, "k" }, { 0x4C, "l" },
-            { 0x4D, "m" }, { 0x4E, "n" }, { 0x4F, "o" }, { 0x50, "p" }, { 0x51, "q" }, { 0x52, "r" },
-            { 0x53, "s" }, { 0x54, "t" }, { 0x55, "u" }, { 0x56, "v" }, { 0x57, "w" }, { 0x58, "x" },
-            { 0x59, "y" }, { 0x5A, "z" }
+            // Numbers
+            { 0x30, "0" }, { 0x31, "1" }, { 0x32, "2" }, { 0x33, "3" }, { 0x34, "4" },
+            { 0x35, "5" }, { 0x36, "6" }, { 0x37, "7" }, { 0x38, "8" }, { 0x39, "9" },
+
+            // Letters
+            { 0x41, "a" }, { 0x42, "b" }, { 0x43, "c" }, { 0x44, "d" }, { 0x45, "e" },
+            { 0x46, "f" }, { 0x47, "g" }, { 0x48, "h" }, { 0x49, "i" }, { 0x4A, "j" },
+            { 0x4B, "k" }, { 0x4C, "l" }, { 0x4D, "m" }, { 0x4E, "n" }, { 0x4F, "o" },
+            { 0x50, "p" }, { 0x51, "q" }, { 0x52, "r" }, { 0x53, "s" }, { 0x54, "t" },
+            { 0x55, "u" }, { 0x56, "v" }, { 0x57, "w" }, { 0x58, "x" }, { 0x59, "y" },
+            { 0x5A, "z" },
+
+            // OEM keys (punctuation/symbols)
+            { 0xBA, ";" }, { 0xBB, "=" }, { 0xBC, "," }, { 0xBD, "-" }, { 0xBE, "." },
+            { 0xBF, "/" }, { 0xC0, "`" }, { 0xDB, "[" }, { 0xDC, "\\" },
+            { 0xDD, "]" }, { 0xDE, "'" }, { 0xDF, "oem8" }
         };
 
-        // Look up the keycode in the dictionary
-        if (keyCodeMap.ContainsKey(hexKeyCode)) return keyCodeMap[hexKeyCode]; // Return the mapped name or character
-
-        return "unknown key"; // Return "unknown key" if the key is not recognized
+        return keyCodeMap.TryGetValue(hexKeyCode, out var keyName) ? keyName : "unknown key";
     }
 
 

@@ -48,7 +48,7 @@ internal partial class QuickMenu : RadForm
                 var clickedItem = sender as RadMenuItem;
                 if (!subMenuItem.IsChecked)
                 {
-                    Beallitasok.DisableCustomWarning();
+                    Beallitasok.DisableCustomNotification();
                     Beallitasok.SetWarningTime(Beallitasok.warningTimes[index]);
                     Debug.WriteLine($"Set a notification in {Beallitasok.warningTimes[index]} minutes.");
                     // Cast the sender to ToolStripMenuItem
@@ -68,7 +68,7 @@ internal partial class QuickMenu : RadForm
                     (Beallitasok._warnings.DropDownItems[index] as ToolStripMenuItem).Checked =
                         false;
                     subMenuItem.IsChecked = false;
-                    Beallitasok.DisableCustomWarning();
+                    Beallitasok.DisableCustomNotification();
                 }
 
                 Close();
@@ -81,7 +81,7 @@ internal partial class QuickMenu : RadForm
         {
             if (CustomsubMenuItem.IsChecked)
             {
-                Beallitasok.DisableCustomWarning();
+                Beallitasok.DisableCustomNotification();
             }
             else
             {

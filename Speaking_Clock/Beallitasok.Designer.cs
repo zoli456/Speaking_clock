@@ -90,7 +90,6 @@
             QuickMenucheckBox = new CheckBox();
             Gmailbutton = new Button();
             MailTimer = new System.Windows.Forms.Timer(components);
-            OverlaycheckBox = new CheckBox();
             ScreenCapturecheckBox = new CheckBox();
             button1 = new Button();
             tabControl2 = new TabControl();
@@ -98,6 +97,14 @@
             tabPage5 = new TabPage();
             tabPage4 = new TabPage();
             label10 = new Label();
+            tabPage1 = new TabPage();
+            DontHookTextBox = new TextBox();
+            label13 = new Label();
+            DonthookapiTextbox = new TextBox();
+            label12 = new Label();
+            label11 = new Label();
+            OverlaytextBox = new TextBox();
+            OverlaycheckBox = new CheckBox();
             tabPage6 = new TabPage();
             RssUpdateTimer = new System.Windows.Forms.Timer(components);
             TimerMenu.SuspendLayout();
@@ -109,6 +116,7 @@
             tabPage3.SuspendLayout();
             tabPage5.SuspendLayout();
             tabPage4.SuspendLayout();
+            tabPage1.SuspendLayout();
             tabPage6.SuspendLayout();
             SuspendLayout();
             // 
@@ -679,23 +687,11 @@
             MailTimer.Interval = 900000;
             MailTimer.Tick += MailTimer_Tick;
             // 
-            // OverlaycheckBox
-            // 
-            OverlaycheckBox.AutoSize = true;
-            OverlaycheckBox.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-            OverlaycheckBox.Location = new Point(240, 38);
-            OverlaycheckBox.Margin = new Padding(4, 3, 4, 3);
-            OverlaycheckBox.Name = "OverlaycheckBox";
-            OverlaycheckBox.Size = new Size(73, 19);
-            OverlaycheckBox.TabIndex = 39;
-            OverlaycheckBox.Text = "Átfedés";
-            OverlaycheckBox.UseVisualStyleBackColor = true;
-            // 
             // ScreenCapturecheckBox
             // 
             ScreenCapturecheckBox.AutoSize = true;
             ScreenCapturecheckBox.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-            ScreenCapturecheckBox.Location = new Point(4, 63);
+            ScreenCapturecheckBox.Location = new Point(240, 38);
             ScreenCapturecheckBox.Margin = new Padding(4, 3, 4, 3);
             ScreenCapturecheckBox.Name = "ScreenCapturecheckBox";
             ScreenCapturecheckBox.Size = new Size(115, 19);
@@ -720,6 +716,7 @@
             tabControl2.Controls.Add(tabPage3);
             tabControl2.Controls.Add(tabPage5);
             tabControl2.Controls.Add(tabPage4);
+            tabControl2.Controls.Add(tabPage1);
             tabControl2.Controls.Add(tabPage6);
             tabControl2.Location = new Point(12, 12);
             tabControl2.Name = "tabControl2";
@@ -784,12 +781,98 @@
             label10.TabIndex = 35;
             label10.Text = "Parancsok:";
             // 
+            // tabPage1
+            // 
+            tabPage1.Controls.Add(DontHookTextBox);
+            tabPage1.Controls.Add(label13);
+            tabPage1.Controls.Add(DonthookapiTextbox);
+            tabPage1.Controls.Add(label12);
+            tabPage1.Controls.Add(label11);
+            tabPage1.Controls.Add(OverlaytextBox);
+            tabPage1.Controls.Add(OverlaycheckBox);
+            tabPage1.Location = new Point(4, 24);
+            tabPage1.Name = "tabPage1";
+            tabPage1.Padding = new Padding(3);
+            tabPage1.Size = new Size(363, 277);
+            tabPage1.TabIndex = 4;
+            tabPage1.Text = "Átfedés";
+            tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // DontHookTextBox
+            // 
+            DontHookTextBox.AcceptsReturn = true;
+            DontHookTextBox.Location = new Point(3, 233);
+            DontHookTextBox.Multiline = true;
+            DontHookTextBox.Name = "DontHookTextBox";
+            DontHookTextBox.PlaceholderText = "pl.:game.exe;game1.exe";
+            DontHookTextBox.Size = new Size(354, 38);
+            DontHookTextBox.TabIndex = 49;
+            // 
+            // label13
+            // 
+            label13.AutoSize = true;
+            label13.Location = new Point(3, 215);
+            label13.Name = "label13";
+            label13.Size = new Size(155, 15);
+            label13.TabIndex = 48;
+            label13.Text = "Egyszerű átfedés használata:";
+            // 
+            // DonthookapiTextbox
+            // 
+            DonthookapiTextbox.AcceptsReturn = true;
+            DonthookapiTextbox.Location = new Point(3, 167);
+            DonthookapiTextbox.Multiline = true;
+            DonthookapiTextbox.Name = "DonthookapiTextbox";
+            DonthookapiTextbox.PlaceholderText = "pl.:game.exe;game1.exe";
+            DonthookapiTextbox.Size = new Size(354, 45);
+            DonthookapiTextbox.TabIndex = 47;
+            // 
+            // label12
+            // 
+            label12.AutoSize = true;
+            label12.Location = new Point(3, 149);
+            label12.Name = "label12";
+            label12.Size = new Size(174, 15);
+            label12.TabIndex = 46;
+            label12.Text = "Alternatív megoldás használata:";
+            // 
+            // label11
+            // 
+            label11.AutoSize = true;
+            label11.Location = new Point(6, 28);
+            label11.Name = "label11";
+            label11.Size = new Size(125, 15);
+            label11.TabIndex = 45;
+            label11.Text = "Játékközbeni gombok:";
+            // 
+            // OverlaytextBox
+            // 
+            OverlaytextBox.AcceptsReturn = true;
+            OverlaytextBox.Location = new Point(3, 46);
+            OverlaytextBox.Multiline = true;
+            OverlaytextBox.Name = "OverlaytextBox";
+            OverlaytextBox.PlaceholderText = "pl.:Game.exe|Gyorsítás|F8";
+            OverlaytextBox.ScrollBars = ScrollBars.Vertical;
+            OverlaytextBox.Size = new Size(354, 100);
+            OverlaytextBox.TabIndex = 44;
+            // 
+            // OverlaycheckBox
+            // 
+            OverlaycheckBox.AutoSize = true;
+            OverlaycheckBox.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            OverlaycheckBox.Location = new Point(7, 6);
+            OverlaycheckBox.Margin = new Padding(4, 3, 4, 3);
+            OverlaycheckBox.Name = "OverlaycheckBox";
+            OverlaycheckBox.Size = new Size(157, 19);
+            OverlaycheckBox.TabIndex = 43;
+            OverlaycheckBox.Text = "Átfedés Bekapcsolva";
+            OverlaycheckBox.UseVisualStyleBackColor = true;
+            // 
             // tabPage6
             // 
             tabPage6.Controls.Add(startup_checkbox);
             tabPage6.Controls.Add(DailyWallpaperBox);
             tabPage6.Controls.Add(ScreenCapturecheckBox);
-            tabPage6.Controls.Add(OverlaycheckBox);
             tabPage6.Controls.Add(QuickMenucheckBox);
             tabPage6.Location = new Point(4, 24);
             tabPage6.Name = "tabPage6";
@@ -800,7 +883,8 @@
             // 
             // RssUpdateTimer
             // 
-            RssUpdateTimer.Interval = 600000;
+            RssUpdateTimer.Enabled = true;
+            RssUpdateTimer.Interval = 1200000;
             RssUpdateTimer.Tick += RssUpdateTimer_Tick;
             // 
             // Beallitasok
@@ -838,6 +922,8 @@
             tabPage5.PerformLayout();
             tabPage4.ResumeLayout(false);
             tabPage4.PerformLayout();
+            tabPage1.ResumeLayout(false);
+            tabPage1.PerformLayout();
             tabPage6.ResumeLayout(false);
             tabPage6.PerformLayout();
             ResumeLayout(false);
@@ -878,7 +964,6 @@
         private RichTextBox richTextBox1;
         private CheckBox DailyWallpaperBox;
         private Label label9;
-        private CheckBox OverlaycheckBox;
         private CheckBox ScreenCapturecheckBox;
         private ToolStripMenuItem rendszerinformációkToolStripMenuItem;
         private ToolStripMenuItem hardwareToolStripMenuItem;
@@ -904,6 +989,14 @@
         private TabPage tabPage5;
         private TabPage tabPage6;
         private System.Windows.Forms.Timer RssUpdateTimer;
+        private TabPage tabPage1;
+        private Label label11;
+        private TextBox OverlaytextBox;
+        private CheckBox OverlaycheckBox;
+        private Label label12;
+        private TextBox DontHookTextBox;
+        private Label label13;
+        private TextBox DonthookapiTextbox;
         private static Button button4;
         internal static ToolStripMenuItem _warnings;
         internal static Button SayItNowbutton;

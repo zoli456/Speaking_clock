@@ -28,24 +28,6 @@ public partial class CustomWarningForm : Form
             if (!int.TryParse(CustomWarning_Amount.Text, out _customWarningMinutes)) return;
             Beallitasok.SetWarningTime(_customWarningMinutes);
             Beallitasok.ResetCustomButtons();
-            var lastItem = Beallitasok._warnings.DropDownItems[Beallitasok._warnings.DropDownItems.Count - 1];
-            if (lastItem is ToolStripMenuItem menuItem)
-            {
-                menuItem.Checked = true;
-                menuItem.Text = $"Figyelmeztetés {_customWarningMinutes} perc múlva";
-            }
-
-            if (Beallitasok.QuickMenu != null || !Beallitasok.QuickMenu.IsDisposed)
-            {
-                (Beallitasok.QuickMenu.radApplicationMenu2.Items[
-                        Beallitasok.QuickMenu.radApplicationMenu2.Items.Count - 1] as
-                    RadMenuItem).IsChecked = true;
-                (Beallitasok.QuickMenu.radApplicationMenu2.Items[
-                            Beallitasok.QuickMenu.radApplicationMenu2.Items.Count - 1] as
-                        RadMenuItem).Text = $"Figyelmeztetés {_customWarningMinutes} perc múlva";
-            }
-
-            Dispose();
         }
         else
         {
@@ -62,24 +44,31 @@ public partial class CustomWarningForm : Form
             {
                 Beallitasok.FigyelmeztetésSection["Óra"].IntValue = _customHour;
                 Beallitasok.FigyelmeztetésSection["Perc"].IntValue = _customMinutes;
-                Beallitasok.CustomWarningHour = _customHour;
-                Beallitasok.CustomWarningMinute = _customMinutes;
-                Beallitasok.CustomWarningRepeate = true;
+                Beallitasok.NotificationRepeate = true;
                 Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             }
             else
             {
-                Beallitasok.CustomWarningHour = _customHour;
-                Beallitasok.CustomWarningMinute = _customMinutes;
-            }
+                var TempDateTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month,
+                    DateTime.Now.Day, _customHour, _customMinutes, 0);
+                if (TempDateTime < DateTime.Now)
+                {
+                    TempDateTime = TempDateTime.AddDays(1);
+                }
 
-            Beallitasok.WarningEnabled = true;
+                Beallitasok.NextNotificationDate = TempDateTime;
+            }
+        }
+
+        if (Beallitasok.NextNotificationDate != null)
+        {
+            Beallitasok.NotificationEnabled = true;
             Beallitasok.ResetCustomButtons();
             var lastItem = Beallitasok._warnings.DropDownItems[Beallitasok._warnings.DropDownItems.Count - 1];
             if (lastItem is ToolStripMenuItem menuItem)
             {
                 menuItem.Checked = true;
-                menuItem.Text = $"Figyelmeztetés {_customHour}:{_customMinutes} kor";
+                menuItem.Text = $"Figyelmeztetés {Beallitasok.NextNotificationDate.Hour}:{Beallitasok.NextNotificationDate.Minute} kor";
             }
 
             (Beallitasok.QuickMenu.radApplicationMenu2.Items[Beallitasok.QuickMenu.radApplicationMenu2.Items.Count - 1]

@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Text.Json;
 using SharpGen.Runtime;
 using Speaking_Clock;
+using Speaking_clock.Overlay;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
 using Vortice.DXGI;
@@ -910,6 +911,7 @@ public class WeatherWidget : RenderForm
             Date = currentValidTime.ToString("MMMM dd", CultureInfo.CreateSpecificCulture("hu-HU")),
             FullDateDisplay = currentValidTime.ToString("dddd, MMMM dd", CultureInfo.CreateSpecificCulture("hu-HU"))
         };
+        await OverlayMessenger.SendWeatherAsync($"{_displayedWeather.Condition} {_displayedWeather.Temperature}");
 
         _forecastDays.Clear();
         var dayParts = forecastData.Daypart?.FirstOrDefault();

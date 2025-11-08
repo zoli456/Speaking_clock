@@ -10,6 +10,7 @@ using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
 using SharpConfig;
 using Speaking_clock;
+using Speaking_clock.Overlay;
 using Speaking_clock.Widgets;
 using Speaking_Clock.Widgets;
 using Telerik.WinControls.UI;
@@ -29,8 +30,8 @@ public partial class Beallitasok : Form
 
     internal static readonly string BasePath = Path.GetDirectoryName(Application.ExecutablePath);
     internal static string SetttingsFileName = "settings.ini";
-    internal static DateTime KovetkezoFigyelmeztetes;
-    internal static bool WarningEnabled;
+    internal static DateTime NextNotificationDate;
+    internal static bool NotificationEnabled;
     internal static Configuration ConfigParser = Configuration.LoadFromFile($"{BasePath}\\{SetttingsFileName}");
     internal static Section BeszédSection = ConfigParser["Beszéd"];
     internal static Section IndításSection = ConfigParser["Indítás"];
@@ -39,6 +40,7 @@ public partial class Beallitasok : Form
     internal static Section HangfelismerésSection = ConfigParser["Hangfelismerés"];
     internal static Section HáttérképSection = ConfigParser["Háttérkép"];
     internal static Section RádióSection = ConfigParser["Rádió"];
+    internal static Section ÁtfedésSection = ConfigParser["Átfedés"];
 
     internal static Section GyorsmenüSection = ConfigParser["Gyorsmenü"];
 
@@ -46,8 +48,7 @@ public partial class Beallitasok : Form
     internal static Section ScreenCaptureSection = ConfigParser["Képlopás"];
     internal static Section RSS_Reader_Section = ConfigParser["RSS_Olvasó"];
     internal static Section WidgetSection = ConfigParser["Widgetek"];
-    internal static int CustomWarningHour, CustomWarningMinute;
-    internal static bool CustomWarningRepeate;
+    internal static bool NotificationRepeate;
     internal static bool PlayingRadio;
     private static RadioControl _radioControl;
     internal static float RadioVolume;
@@ -61,9 +62,12 @@ public partial class Beallitasok : Form
     private static byte[] _weatherSound;
     private static byte[] _namedaySound;
     private static byte[] _forecastSound;
+
     internal static QuickMenu QuickMenu;
+
     internal static FullScreenMenu FullscreenMenu;
     internal static bool FullScreenmenuOpened;
+
     internal static OverlayForm Overlay;
     internal static TimeOverlayForm TimeOverlay;
     internal static Minesweeper minesweeperForm;
@@ -103,6 +107,8 @@ public partial class Beallitasok : Form
     internal static RadioPlayerWidget radioPlayerWidget;
     internal static WeatherWidget weatherWidget;
     internal static bool FullScreenApplicationRunning;
+    private static string FullScreenApplicationName;
+    internal static bool DLL_Injected;
     private WidgetSetup _widgetForm;
     internal bool DefaultBrowserPlayingAudio;
     internal Timer? DelayedLoadTimer;
@@ -162,14 +168,15 @@ public partial class Beallitasok : Form
         synctime_timer.Enabled = SzinkronizálásSection["Automatikus"].BoolValue;
         timerszerver_textBox.Text = SzinkronizálásSection["Szerver"].StringValue;
         ArrangeTimer.Checked = BeszédSection["Igazítás"].BoolValue;
-        CustomWarningHour = FigyelmeztetésSection["Óra"].IntValue;
-        CustomWarningMinute = FigyelmeztetésSection["Perc"].IntValue;
         voiceRecognitionCheckbox.Checked = HangfelismerésSection["Bekapcsolva"].BoolValue;
         NoiseFilteringcheckBox.Checked = HangfelismerésSection["Zajszűrés"].BoolValue;
         DailyWallpaperBox.Checked = HáttérképSection["Bekapcsolva"].BoolValue;
         RadioVolume = (float)(double)RádióSection["Hangerő"].IntValue / 100;
-        OverlaycheckBox.Checked = GyorsmenüSection["Átfedés"].BoolValue;
         ScreenCapturecheckBox.Checked = ScreenCaptureSection["Bekapcsolva"].BoolValue;
+        OverlaycheckBox.Checked = ÁtfedésSection["Bekapcsolva"].BoolValue;
+        OverlaytextBox.Text = OverlayMessenger.ConvertToMultiLine(ÁtfedésSection["Gombok"].StringValue);
+        DonthookapiTextbox.Text = ÁtfedésSection["DontHookRendering"].StringValue.Trim();
+        DontHookTextBox.Text = ÁtfedésSection["UseSimpleOverlay"].StringValue.Trim();
 
         try
         {
@@ -372,8 +379,34 @@ public partial class Beallitasok : Form
         HáttérképSection["Bekapcsolva"].BoolValue = DailyWallpaperBox.Checked;
         ScreenCaptureSection["Bekapcsolva"].BoolValue = ScreenCapturecheckBox.Checked;
         GyorsmenüSection["Bekapcsolva"].BoolValue = QuickMenucheckBox.Checked;
-        GyorsmenüSection["Átfedés"].BoolValue = OverlaycheckBox.Checked;
         CreateTask();
+        ÁtfedésSection["Bekapcsolva"].BoolValue = OverlaycheckBox.Checked;
+        ÁtfedésSection["Gombok"].StringValue = OverlayMessenger.ConvertToSingleLine(OverlaytextBox.Text);
+
+        DonthookapiTextbox.Text = DonthookapiTextbox.Text.Trim();
+        if (!DonthookapiTextbox.Text.Contains(";") && DonthookapiTextbox.Text.Length > 0)
+        {
+            DonthookapiTextbox.Focus();
+            MessageBox.Show("Hibás adatokat adtál meg!", "Hiba", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        ÁtfedésSection["DontHookRendering"].StringValue = DonthookapiTextbox.Text;
+        DonthookapiTextbox.Text = DonthookapiTextbox.Text.Trim();
+        DontHookTextBox.Text = DontHookTextBox.Text.Trim();
+        if (!DontHookTextBox.Text.Contains(";") && DontHookTextBox.Text.Length > 0)
+        {
+            DontHookTextBox.Focus();
+            MessageBox.Show("Hibás adatokat adtál meg!", "Hiba", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        ÁtfedésSection["UseSimpleOverlay"].StringValue = DontHookTextBox.Text;
+
+        ÁtfedésSection["DontHookRendering"].StringValue = DonthookapiTextbox.Text;
+        DontHookTextBox.Text = DontHookTextBox.Text.Trim();
+        ÁtfedésSection["UseSimpleOverlay"].StringValue = DontHookTextBox.Text.Trim();
+
         if (BeszédSection["Bekapcsolva"].BoolValue)
             KovetkezoBeszed = DateTime.Now.AddMinutes(BeszédSection["Gyakoriság"].IntValue);
 
@@ -407,24 +440,13 @@ public partial class Beallitasok : Form
             //BlockMiddleClick.DeactivateHook();
             MouseButtonPress.DeactivateMouseHook();
 
-        if (GyorsmenüSection["Átfedés"].BoolValue)
-        {
-            if (Overlay == null || TimeOverlay == null || Overlay.IsDisposed)
-            {
-                Overlay = new OverlayForm();
-                TimeOverlay = new TimeOverlayForm();
-            }
-        }
-        else
-        {
-            Overlay?.Dispose();
-            //TimeOverlay?.Dispose();
-        }
-
         if (HangfelismerésSection["Bekapcsolva"].BoolValue)
             SpeechRecognition.ActivateRecognition(VoskModel);
         else
             SpeechRecognition.DeactivateRecognition();
+
+        MessageBox.Show("A beállítások sikeresen mentésre kerültek!", "Információ", MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
     }
 
     /// <summary>
@@ -469,7 +491,7 @@ public partial class Beallitasok : Form
         rk.Dispose();
     }
 
-    private void ResetWarnings()
+    private void ResetNotification()
     {
         ResetCustomButtons();
         // Get the last item in the collection
@@ -486,7 +508,10 @@ public partial class Beallitasok : Form
     private void szamlalo_Tick(object sender, EventArgs e)
     {
         JelenlegiIdo = DateTime.Now;
-        FullScreenApplicationRunning = FullScreenChecker.IsForegroundWindowFullscreen();
+        FullScreenApplicationName = FullScreenChecker.GetForegroundFullscreenProcessName();
+        FullScreenApplicationRunning = FullScreenApplicationName != null;
+        if (ÁtfedésSection["Bekapcsolva"].BoolValue) UpdateOverlay();
+
         if (HangfelismerésSection["Bekapcsolva"].BoolValue && DefaultBrowerPath != "")
             if (DefaultBrowserPlayingAudio !=
                 Utils.IsProcessPlayingAudio(
@@ -500,49 +525,25 @@ public partial class Beallitasok : Form
                     SpeechRecognition.EnableVoiceRecognition();
             }
 
-        /*if (FullScreenChecker.IsForegroundWindowFullScreen())
+        if (NotificationEnabled)
         {
-            Debug.WriteLine("Maximalizálva!");
-        }*/
-
-        if (CustomWarningHour != -1 && CustomWarningMinute != -1)
-        {
-            if (JelenlegiIdo.Hour == CustomWarningHour && JelenlegiIdo.Minute == CustomWarningMinute)
+            if (NextNotificationDate <= JelenlegiIdo)
             {
-                if (!CustomWarningRepeate)
-                    ResetWarnings();
-
-                if (WarningEnabled)
+                if (!FullScreenApplicationRunning)
+                    Utils.ShowAlert("Figyelmeztetés!", "Egy előre beállított figyelmeztető lejárt.",
+                        30);
+                if (!PlayingRadio)
+                    PlaySound(AlarmSound);
+                if (!NotificationRepeate)
                 {
-                    WarningEnabled = false;
-                    if (!PlayingRadio)
-                        PlaySound(AlarmSound);
-                    if (!FullScreenApplicationRunning)
-                        Utils.ShowAlert("Figyelmeztetés!", "Egy előre beállított figyelmeztető lejárt.",
-                            30);
-
-                    return;
+                    NotificationEnabled = false;
+                    ResetNotification();
+                }
+                else
+                {
+                    NextNotificationDate = JelenlegiIdo.AddMinutes(MinutesUntil(FigyelmeztetésSection["Óra"].IntValue, FigyelmeztetésSection["Perc"].IntValue));
                 }
             }
-            else if (CustomWarningRepeate)
-            {
-                WarningEnabled = true;
-            }
-        }
-        // Handle Scheduled Warning
-        else if (WarningEnabled && JelenlegiIdo.Hour == KovetkezoFigyelmeztetes.Hour &&
-                 JelenlegiIdo.Minute == KovetkezoFigyelmeztetes.Minute
-                )
-        {
-            WarningEnabled = false;
-            ResetWarnings();
-            if (!PlayingRadio)
-                PlaySound(AlarmSound);
-            if (!FullScreenApplicationRunning)
-                Utils.ShowAlert("Visszaszámlálás lejárt!", "Egy előre beállított figyelmeztető visszaszámlálás lejárt.",
-                    30);
-
-            return;
         }
 
         var shouldAnnounce = BeszédSection["Igazítás"].BoolValue
@@ -577,7 +578,7 @@ public partial class Beallitasok : Form
                 HáttérképSection["Bekapcsolva"].BoolValue = false;
             }
 
-        if (PendingWidgetUpdate && !FullScreenApplicationRunning) WidgetUpdate();
+        if (PendingWidgetUpdate /*&& !FullScreenApplicationRunning*/) WidgetUpdate();
     }
 
     private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -733,11 +734,11 @@ public partial class Beallitasok : Form
 
     internal static void SetWarningTime(int perc)
     {
-        KovetkezoFigyelmeztetes = DateTime.Now.AddMinutes(perc);
-        WarningEnabled = true;
+        NextNotificationDate = DateTime.Now.AddMinutes(perc);
+        NotificationEnabled = true;
     }
 
-    internal static void DisableCustomWarning()
+    internal static void DisableCustomNotification()
     {
         var lastItem = _warnings.DropDownItems[_warnings.DropDownItems.Count - 1];
         if (lastItem is ToolStripMenuItem menuItem)
@@ -750,14 +751,15 @@ public partial class Beallitasok : Form
             QuickMenu.radApplicationMenu2.Items[QuickMenu.radApplicationMenu2.Items.Count - 1] as RadMenuItem;
         lastItem2.Text = "Egyedi...";
         lastItem2.IsChecked = false;
-        WarningEnabled = false;
-        if (CustomWarningHour == -1 || CustomWarningMinute == -1) return;
-        FigyelmeztetésSection["Óra"].IntValue = -1;
-        FigyelmeztetésSection["Perc"].IntValue = -1;
-        CustomWarningHour = -1;
-        CustomWarningMinute = -1;
-        CustomWarningRepeate = false;
-        ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
+        NotificationEnabled = false;
+        NextNotificationDate = DateTime.MinValue;
+        if (NotificationEnabled)
+        {
+            FigyelmeztetésSection["Óra"].IntValue = -1;
+            FigyelmeztetésSection["Perc"].IntValue = -1;
+            NotificationRepeate = false;
+            ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
+        }
     }
 
 
@@ -1156,7 +1158,7 @@ public partial class Beallitasok : Form
 
                 if (!subMenuItem.Checked)
                 {
-                    DisableCustomWarning();
+                    DisableCustomNotification();
                     SetWarningTime(warningTimes[index]);
                     Debug.WriteLine($"Set a notification in {warningTimes[index]} minutes.");
                     if (clickedItem != null && clickedItem.Owner != null)
@@ -1168,18 +1170,19 @@ public partial class Beallitasok : Form
                 {
                     (_warnings.DropDownItems[index] as ToolStripMenuItem).Checked =
                         false;
-                    DisableCustomWarning();
+                    DisableCustomNotification();
                 }
             };
             _warnings.DropDownItems.Add(subMenuItem);
         }
+
 
         var CustomsubMenuItem = new ToolStripMenuItem { Text = "Egyedi..." };
         CustomsubMenuItem.Click += (sender, e) =>
         {
             if (CustomsubMenuItem.Checked)
             {
-                DisableCustomWarning();
+                DisableCustomNotification();
             }
             else
             {
@@ -1188,19 +1191,18 @@ public partial class Beallitasok : Form
             }
         };
         _warnings.DropDownItems.Add(CustomsubMenuItem);
-        if (CustomWarningMinute != -1 && CustomWarningHour != -1)
+        if (FigyelmeztetésSection["Óra"].IntValue != -1 && FigyelmeztetésSection["Perc"].IntValue != -1)
         {
-            WarningEnabled = true;
+            NotificationEnabled = true;
             var lastItem = _warnings.DropDownItems[_warnings.DropDownItems.Count - 1];
 
             // Check if it is a ToolStripMenuItem
             if (lastItem is ToolStripMenuItem menuItem)
             {
                 menuItem.Checked = true;
-                menuItem.Text = $"Figyelmeztetés {CustomWarningHour}:{CustomWarningMinute} kor";
+                menuItem.Text =
+                    $"Figyelmeztetés {FigyelmeztetésSection["Óra"].IntValue}:{FigyelmeztetésSection["Perc"].IntValue} kor";
             }
-
-            CustomWarningRepeate = true;
         }
 
         AlarmSound = new MemoryStream(File.ReadAllBytes($"{BasePath}\\Hangok\\alarm.mp3"));
@@ -1250,11 +1252,8 @@ public partial class Beallitasok : Form
         }
 
         if (RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue) EnableRSSReader(1);
-
         if (RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue) EnableRSSReader(2);
-
         if (RSS_Reader_Section["Olvasó_3_Bekapcsolva"].BoolValue) EnableRSSReader(3);
-
         if (RSS_Reader_Section["Olvasó_4_Bekapcsolva"].BoolValue) EnableRSSReader(4);
 
         if (WidgetSection["Analóg_Bekapcsolva"].BoolValue)
@@ -1336,18 +1335,14 @@ public partial class Beallitasok : Form
         TrayIcon.Visible = true;
         szamlalo.Enabled = true;
 
-        if (GyorsmenüSection["Átfedés"].BoolValue)
-        {
-            Overlay = new OverlayForm();
-            TimeOverlay = new TimeOverlayForm();
-        }
-
         KeyboardFunction.ActivateKeyboardHook();
         if (GyorsmenüSection["Bekapcsolva"].BoolValue)
         {
             QuickMenucheckBox.Checked = true;
             MouseButtonPress.ActivateMouseHook();
         }
+
+        OverlayMessenger.RunServerLoop();
     }
 
     internal static void EnableRSSReader(int index)
@@ -1552,5 +1547,91 @@ public partial class Beallitasok : Form
             else
                 Debug.WriteLine("Időjárás widget frissítése nem szükséges.");
         }
+    }
+
+    internal static void ActivateLegacyOverlay()
+    {
+        if (!FullScreenApplicationRunning) return;
+        if (Overlay == null || Overlay.IsDisposed) Overlay = new OverlayForm();
+
+        if (TimeOverlay == null) TimeOverlay = new TimeOverlayForm();
+
+        Debug.WriteLine("Legacy overlay created.");
+    }
+
+    internal static void DeactivateLegacyOverlay()
+    {
+        if (Overlay != null)
+        {
+            if (Overlay.InvokeRequired)
+            {
+                Overlay.Invoke(() =>
+                {
+                    Overlay?.Close();
+                    Overlay?.Dispose();
+                    Overlay = null;
+                });
+            }
+            else
+            {
+                Overlay?.Close();
+                Overlay?.Dispose();
+                Overlay = null;
+            }
+        }
+
+        if (TimeOverlay != null)
+        {
+            TimeOverlay.HideOverlay();
+            TimeOverlay?.Dispose();
+            TimeOverlay = null;
+        }
+    }
+
+
+    private static void UpdateOverlay()
+    {
+        if (!FullScreenApplicationRunning || DllInjector.IsShowSimpleOverlay(FullScreenApplicationName)) return;
+        if (DllInjector.IsForceSimpleOverlay(FullScreenApplicationName))
+        {
+            ActivateLegacyOverlay();
+        }
+        else
+        {
+            DeactivateLegacyOverlay();
+            if (!DLL_Injected)
+            {
+                DLL_Injected = true;
+                Task.Run(() => { DllInjector.InjectToForeground(); });
+            }
+
+            if (NotificationEnabled)
+            {
+                if ((NextNotificationDate - DateTime.Now).Minutes < 10)
+                    OverlayMessenger.SetButtonTextAsync((NextNotificationDate - DateTime.Now).Minutes
+                        .ToString());
+                else
+                    OverlayMessenger.SetButtonTextAsync("X");
+            }
+            else
+            {
+                OverlayMessenger.SetButtonTextAsync("X");
+            }
+        }
+    }
+
+    internal static int MinutesUntil(int targetHour, int targetMinute)
+    {
+        DateTime now = DateTime.Now;
+        DateTime targetTime = new DateTime(
+            now.Year, now.Month, now.Day, targetHour, targetMinute, 0
+        );
+
+        // If target time already passed today, move it to tomorrow
+        if (targetTime <= now)
+            targetTime = targetTime.AddDays(1);
+
+        TimeSpan difference = targetTime - now;
+        return (int)Math.Round(difference.TotalMinutes);
     }
 }

@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Xml;
 using Speaking_Clock;
+using Speaking_clock.Overlay;
 using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
@@ -549,9 +550,9 @@ internal class RssReader : RenderForm
                 {
                     var title = node["title"]?.InnerText ?? "No Title";
                     var link = node["link"]?.InnerText ?? "#";
-                    // Try to get description, fallback to title if not present
                     var description = node["description"]?.InnerText ?? node["summary"]?.InnerText ?? title;
                     newFeedItems.Add(new RssFeedItem(title, link, description));
+                    await OverlayMessenger.SendHeadlineAsync(title);
                 }
 
             if (!newFeedItems.SequenceEqual(_items))

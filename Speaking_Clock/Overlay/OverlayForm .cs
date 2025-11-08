@@ -136,14 +136,14 @@ public class OverlayForm : Form
             //BlockMiddleClick.DeactivateHook();
             if (Beallitasok.GyorsmenüSection["Bekapcsolva"].BoolValue)
                 MouseButtonPress.DeactivateMouseHook();
-            if (Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
+            if (Beallitasok.ÁtfedésSection["Bekapcsolva"].BoolValue)
             {
                 if (IsCursorNearTopLeft())
                     Beallitasok.Overlay.Show(); //User32.ShowWindow(this.Handle, ShowWindowCommand.SW_SHOW);
-                else if (Beallitasok.WarningEnabled)
+                else if (Beallitasok.NotificationEnabled)
                     Beallitasok.Overlay.Show();
                 else
-                    Beallitasok.Overlay.Hide();
+                    Beallitasok.Overlay?.Hide();
                 Beallitasok.QuickMenu?.Close();
             }
         }
@@ -152,17 +152,13 @@ public class OverlayForm : Form
             //BlockMiddleClick.ActivateHook();
             if (Beallitasok.GyorsmenüSection["Bekapcsolva"].BoolValue)
                 MouseButtonPress.ActivateMouseHook();
-            if (Beallitasok.GyorsmenüSection["Átfedés"].BoolValue)
-            {
-                Beallitasok.Overlay.Hide();
-                Beallitasok.FullscreenMenu?.Close();
-            }
+            if (Beallitasok.ÁtfedésSection["Bekapcsolva"].BoolValue) Beallitasok.FullscreenMenu?.Close();
         }
 
-        if (Beallitasok.WarningEnabled && Beallitasok.CustomWarningMinute != 1)
+        if (Beallitasok.NotificationEnabled)
         {
-            if ((Beallitasok.KovetkezoFigyelmeztetes - DateTime.Now).Minutes < 10)
-                _topLeftButton.Text = (Beallitasok.KovetkezoFigyelmeztetes - DateTime.Now).Minutes.ToString();
+            if ((Beallitasok.NextNotificationDate - DateTime.Now).Minutes < 10)
+                _topLeftButton.Text = (Beallitasok.NextNotificationDate - DateTime.Now).Minutes.ToString();
             else
                 _topLeftButton.Text = "X";
         }
@@ -209,5 +205,34 @@ public class OverlayForm : Form
         var dpi = (int)GetDpiForWindow(windowHandle);
 
         return dpi / Beallitasok.BaseDpi;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (_updatetimer != null)
+            {
+                _updatetimer.Stop();
+                _updatetimer.Tick -= Updatetimer_Tick;
+                _updatetimer.Dispose();
+                _updatetimer = null;
+            }
+
+            if (_topLeftButton != null)
+            {
+                _topLeftButton.Click -= TopLeftButton_Click;
+                _topLeftButton.Dispose();
+                _topLeftButton = null;
+            }
+
+            if (components != null)
+            {
+                components.Dispose();
+                components = null;
+            }
+        }
+
+        base.Dispose(disposing);
     }
 }
