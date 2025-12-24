@@ -283,7 +283,7 @@ public partial class WidgetSetup : Form
             ShowSecondcheckBox.Enabled = false;
         }
 
-        if (Beallitasok.WidgetSection["Analóg_méret"].FloatValue >= 0.7f)
+        if (Beallitasok.WidgetSection["Analóg_méret"].FloatValue >= 1f)
             BigcheckBox1.Checked = true;
         else
             SmallcheckBox1.Checked = true;
@@ -427,7 +427,7 @@ public partial class WidgetSetup : Form
         initalized = false;
         BigcheckBox1.Checked = !BigcheckBox1.Checked;
         SmallcheckBox1.Checked = true;
-        Beallitasok.WidgetSection["Analóg_méret"].FloatValue = 0.4f;
+        Beallitasok.WidgetSection["Analóg_méret"].FloatValue = 0.7f;
         Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         initalized = true;
     }
@@ -438,7 +438,7 @@ public partial class WidgetSetup : Form
         initalized = false;
         SmallcheckBox1.Checked = !SmallcheckBox1.Checked;
         BigcheckBox1.Checked = true;
-        Beallitasok.WidgetSection["Analóg_méret"].FloatValue = 0.7f;
+        Beallitasok.WidgetSection["Analóg_méret"].FloatValue = 1f;
         Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
         initalized = true;
     }

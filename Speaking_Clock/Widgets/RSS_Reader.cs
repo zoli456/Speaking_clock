@@ -1,25 +1,20 @@
 ﻿using System.Diagnostics;
-using System.Drawing.Drawing2D;
 using System.Globalization;
+using System.Numerics;
 using System.Xml;
 using Speaking_Clock;
 using Speaking_clock.Overlay;
-using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
-using Vortice.DXGI;
 using Vortice.Mathematics;
-using Vortice.WinForms;
-using Timer = System.Timers.Timer;
 using static Vanara.PInvoke.User32;
-using AlphaMode = Vortice.DCommon.AlphaMode;
-using Color = System.Drawing.Color;
 using RectangleF = System.Drawing.RectangleF;
 using Size = System.Drawing.Size;
+using Timer = System.Timers.Timer;
 
 namespace Speaking_clock.Widgets;
 
-// --- Configuration Class ---
+// --- Configuration Class (Unchanged) ---
 public class RssReaderSettings
 {
     public int FontSize { get; set; } = 18;
@@ -28,34 +23,31 @@ public class RssReaderSettings
     public int HeaderVerticalPadding { get; set; } = 5;
     public int MaxDisplayItems { get; set; } = 10;
     public int WindowWidth { get; set; } = 400;
-
-    public double WindowOpacity { get; set; } = 0.9;
-
-    //public bool AllowDragging { get; set; } = true;
-    public string HeaderColor { get; set; } = "blue"; // Name or Hex
+    public double WindowOpacity { get; set; } = 0.9; // Applied via Alpha in Brush now
+    public string HeaderColor { get; set; } = "blue";
     public string TextColor { get; set; } = "white";
-    public string ContentBackgroundColor { get; set; } = "#D0202020"; // Default: ~81% alpha, dark grey/black
+    public string ContentBackgroundColor { get; set; } = "#D0202020";
     public string HoverItemBackgroundColor { get; set; } = "#404040";
     public string FontName { get; set; } = "Arial";
     public int UpdateIntervalMs { get; set; } = 600000;
-    public int CornerRadius { get; set; } = 15;
+    public int CornerRadius { get; set; } = 15; // kept for compatibility but unused in rectangular mode
     public int ScrollbarWidth { get; set; } = 8;
     public string ScrollbarColor { get; set; } = "gray";
     public int InitialX { get; set; } = 100;
     public int InitialY { get; set; } = 100;
 }
 
-// --- RSS Item Data Structure ---
+// --- RSS Item Data Structure (Unchanged) ---
 public record RssFeedItem(string Title, string Link, string FullDescription);
 
-internal class RssReader : RenderForm
+internal class RssReader : CompositionWidgetBase
 {
     private const int ToolTipInitialDelay = 200;
     private const int ToolTipAutoPopDelay = 7000;
     private const int ToolTipReshowDelay = 200;
     private static readonly HttpClient httpClient = new();
 
-    // --- Factories & Configuration ---
+    // --- Configuration ---
     private readonly string _feedUrl;
     private readonly int _formInstanceIndex;
     private readonly RssReaderSettings _settings;
@@ -64,93 +56,77 @@ internal class RssReader : RenderForm
     private readonly ToolTip _toolTip = new();
     private readonly Timer _updateTimer;
     private readonly string _widgetTitle;
-    private ID2D1SolidColorBrush _contentBackgroundBrush;
-    private ID2D1SolidColorBrush _defaultTextBrush;
-    private Point _dragStartPoint;
-    private ID2D1Brush _headerBrush;
-    private float _headerHeight;
-    private ID2D1SolidColorBrush _hoverBackgroundBrush;
-    private int _hoveredIndex = -1;
-    private bool _isDragging;
 
-    // --- Calculated Dimensions ---
+    // --- Brushes & Formats (Device Dependent) ---
+    private ID2D1SolidColorBrush? _contentBackgroundBrush;
+    private ID2D1SolidColorBrush? _defaultTextBrush;
+    private ID2D1SolidColorBrush? _headerBrush;
+    private float _headerHeight;
+    private ID2D1SolidColorBrush? _hoverBackgroundBrush;
+
+    // --- Logic State ---
+    private int _hoveredIndex = -1;
     private float _itemHeight;
 
-    // --- UI State ---
     private List<RssFeedItem> _items = new();
-    private IDWriteTextFormat _listItemTextFormat;
-
-    // --- Direct2D Resources ---
-    private ID2D1HwndRenderTarget _renderTarget;
-    private ID2D1SolidColorBrush _scrollbarBrush;
+    private IDWriteTextFormat? _listItemTextFormat;
+    private ID2D1SolidColorBrush? _scrollbarBrush;
     private int _scrollOffset;
-    private IDWriteTextFormat _titleTextFormat;
-    private float _totalActualContentHeight; // Height required for all items
+    private IDWriteTextFormat? _titleTextFormat;
     private int _visibleWindowHeight;
 
+    // Constructor
     public RssReader(int formInstanceIndex, string feedUrl, string title, RssReaderSettings settings)
+        : base(
+            settings?.InitialX ?? 100,
+            settings?.InitialY ?? 100,
+            settings?.WindowWidth ?? 400,
+            CalculateInitialHeight(settings ?? new RssReaderSettings()))
     {
         _formInstanceIndex = formInstanceIndex;
         _feedUrl = feedUrl;
         _widgetTitle = title;
-        _settings = settings ?? new RssReaderSettings(); // Ensure settings is not null
+        _settings = settings ?? new RssReaderSettings();
 
         InitializeUiProperties();
-        CalculateDimensions();
         InitializeToolTip();
-        RegisterEventHandlers();
+
+        // Calculate internal dimensions based on settings
+        CalculateDimensions();
 
         // Initial RSS Load
-        _ = LoadRssFeedAsync(); // Fire and forget with error handling within
+        _ = LoadRssFeedAsync();
 
         _updateTimer = new Timer(_settings.UpdateIntervalMs);
         _updateTimer.Elapsed += async (s, e) => await OnUpdateTimerElapsedAsync();
         _updateTimer.Start();
-
-        Show();
     }
 
-
-    protected override CreateParams CreateParams
+    // Static helper to determine height before calling Base Constructor
+    private static int CalculateInitialHeight(RssReaderSettings s)
     {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= (int)WindowStylesEx.WS_EX_TOOLWINDOW; // Hide from Alt+Tab
-            //cp.ExStyle |= (int)WindowStylesEx.WS_EX_LAYERED;
-            return cp;
-        }
+        float hHeight = s.TitleFontSize + s.HeaderVerticalPadding * 2;
+        float iHeight = s.FontSize + s.ItemSpacing * 2;
+        return (int)(hHeight + s.MaxDisplayItems * iHeight);
     }
 
     private void InitializeUiProperties()
     {
         Text = _widgetTitle;
-        FormBorderStyle = FormBorderStyle.None;
-        SetStyle(
-            ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor,
-            true);
-        BackColor = Color.Transparent;
-        Opacity = _settings.WindowOpacity;
-        ClientSize = new Size(_settings.WindowWidth, _visibleWindowHeight);
-        ShowInTaskbar = false;
-        TopMost = false;
-        DoubleBuffered = false;
-
-        StartPosition = FormStartPosition.Manual;
-        Location = new Point(_settings.InitialX, _settings.InitialY);
-        Region = CreateRoundedRectangleRegion(ClientSize.Width, ClientSize.Height, _settings.CornerRadius);
+        // Note: Transparency and Styles are largely handled by CompositionWidgetBase
+        Opacity = 1.0; // DComp handles alpha via brushes, Form opacity should stay 1
     }
 
     private void CalculateDimensions()
     {
-        _itemHeight = _settings.FontSize + _settings.ItemSpacing * 2; // More vertical padding for items
+        _itemHeight = _settings.FontSize + _settings.ItemSpacing * 2;
         _headerHeight = _settings.TitleFontSize + _settings.HeaderVerticalPadding * 2;
         _visibleWindowHeight = (int)(_headerHeight + _settings.MaxDisplayItems * _itemHeight);
+
+        // Update Form Size if calculation differs from current
         if (ClientSize.Height != _visibleWindowHeight || ClientSize.Width != _settings.WindowWidth)
-        {
             ClientSize = new Size(_settings.WindowWidth, _visibleWindowHeight);
-            Region = CreateRoundedRectangleRegion(ClientSize.Width, ClientSize.Height, _settings.CornerRadius);
-        }
+        // We do NOT set Region here. We draw rectangular corners in DrawContent.
     }
 
     private void InitializeToolTip()
@@ -159,62 +135,259 @@ internal class RssReader : RenderForm
         _toolTip.InitialDelay = ToolTipInitialDelay;
         _toolTip.ReshowDelay = ToolTipReshowDelay;
         _toolTip.ShowAlways = true;
-        _toolTip.UseFading = true;
-        _toolTip.UseAnimation = true;
+        // Tooltips on layered/transparent windows can be tricky, 
+        // typically requires standard window parenting.
     }
 
-    private void RegisterEventHandlers()
-    {
-        MouseDown += OnWidgetMouseDown;
-        MouseMove += OnWidgetMouseMove;
-        MouseUp += OnWidgetMouseUp;
-        MouseLeave += OnWidgetMouseLeave;
-        MouseWheel += OnWidgetMouseWheel;
-        MouseClick += OnWidgetMouseClick;
-        SizeChanged += OnWidgetSizeChanged;
-    }
+    // --- Base Class Overrides: Rendering ---
 
-    private void OnWidgetSizeChanged(object sender, EventArgs e)
+    protected override void DrawContent(ID2D1DeviceContext context)
     {
-        // Re-apply rounded region if size changes
-        if (ClientSize.Width > 0 && ClientSize.Height > 0)
+        // 1. Ensure Resources exist for this specific Context
+        CreateDeviceDependentResources(context);
+
+        if (_items == null) return;
+
+        // --- ROUNDED CORNER CLIPPING SETUP ---
+
+        // Define the full bounds
+        var fullRect = new RectangleF(0, 0, ClientSize.Width, ClientSize.Height);
+
+        // Define the rounding parameters
+        var roundedFull = new RoundedRectangle(fullRect, _settings.CornerRadius, _settings.CornerRadius);
+
+        // Create a Geometry for clipping. 
+        // We create it from the Factory associated with the current context to ensure compatibility.
+        using var roundedGeometry = context.Factory.CreateRoundedRectangleGeometry(roundedFull);
+
+        // Prepare the layer parameters. 
+        // 'GeometricMask' is the key: it forces all subsequent drawing to fit inside the rounded shape.
+        var layerParams = new LayerParameters1
         {
-            Region = CreateRoundedRectangleRegion(ClientSize.Width, ClientSize.Height, _settings.CornerRadius);
-            CreateDirect2DResources();
+            ContentBounds = fullRect,
+            GeometricMask = roundedGeometry,
+            MaskTransform = Matrix3x2.Identity,
+            MaskAntialiasMode = AntialiasMode.PerPrimitive, // Smooths the edges
+            Opacity = 1.0f
+        };
+
+        // Push the layer. Everything drawn between PushLayer and PopLayer is clipped.
+        context.PushLayer(layerParams, null);
+
+        // -------------------------------------
+        //      START DRAWING CONTENT
+        // -------------------------------------
+
+        // Draw Header Background
+        var headerRect = new Rect(0, 0, ClientSize.Width, _headerHeight);
+        if (_headerBrush != null) context.FillRectangle(headerRect, _headerBrush);
+
+        // Draw Content Area Background
+        var contentRect = new Rect(0, _headerHeight, ClientSize.Width, ClientSize.Height);
+        if (_contentBackgroundBrush != null) context.FillRectangle(contentRect, _contentBackgroundBrush);
+
+        // Draw Title Text
+        if (_titleTextFormat != null && _defaultTextBrush != null)
+            context.DrawText(_widgetTitle, _titleTextFormat, headerRect, _defaultTextBrush);
+
+        // Draw Items and Scrollbar
+        DrawRssItems(context);
+        DrawCustomScrollbar(context);
+
+        // Restore the drawing state
+        context.PopLayer();
+    }
+
+    private void CreateDeviceDependentResources(ID2D1DeviceContext context)
+    {
+        if (_defaultTextBrush == null || _defaultTextBrush.Factory.NativePointer != context.Factory.NativePointer)
+        {
+            DisposeDeviceDependentResources();
+
+            _defaultTextBrush = context.CreateSolidColorBrush(ParseColor(_settings.TextColor, Colors.White));
+            _headerBrush = context.CreateSolidColorBrush(ParseColor(_settings.HeaderColor, Colors.CornflowerBlue));
+
+            // Parse background color and apply Opacity setting
+            var bgCol = ParseColor(_settings.ContentBackgroundColor, new Color4(0.2f, 0.2f, 0.2f, 0.8f));
+            _contentBackgroundBrush = context.CreateSolidColorBrush(bgCol);
+
+            _hoverBackgroundBrush =
+                context.CreateSolidColorBrush(ParseColor(_settings.HoverItemBackgroundColor, Colors.DarkGray));
+            _scrollbarBrush = context.CreateSolidColorBrush(ParseColor(_settings.ScrollbarColor, Colors.DimGray));
+            if (_titleTextFormat == null)
+            {
+                _titleTextFormat = _dwriteFactory.CreateTextFormat(_settings.FontName, _settings.TitleFontSize);
+                _titleTextFormat.TextAlignment = TextAlignment.Center;
+                _titleTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
+            }
+
+            if (_listItemTextFormat == null)
+            {
+                _listItemTextFormat = _dwriteFactory.CreateTextFormat(_settings.FontName, _settings.FontSize);
+                _listItemTextFormat.TextAlignment = TextAlignment.Leading;
+                _listItemTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
+                _listItemTextFormat.WordWrapping = WordWrapping.NoWrap;
+
+                var trimmingSign = _dwriteFactory.CreateEllipsisTrimmingSign(_listItemTextFormat);
+                _listItemTextFormat.SetTrimming(
+                    new Trimming { Granularity = TrimmingGranularity.Character, Delimiter = 0, DelimiterCount = 0 },
+                    trimmingSign);
+            }
+        }
+    }
+
+    private void DisposeDeviceDependentResources()
+    {
+        _defaultTextBrush?.Dispose();
+        _defaultTextBrush = null;
+        _headerBrush?.Dispose();
+        _headerBrush = null;
+        _contentBackgroundBrush?.Dispose();
+        _contentBackgroundBrush = null;
+        _hoverBackgroundBrush?.Dispose();
+        _hoverBackgroundBrush = null;
+        _scrollbarBrush?.Dispose();
+        _scrollbarBrush = null;
+    }
+
+    private void DrawRssItems(ID2D1DeviceContext context)
+    {
+        var currentY = _headerHeight;
+        var scrollbarAreaWidth = _items.Count > _settings.MaxDisplayItems ? _settings.ScrollbarWidth + 5 : 0;
+
+        for (var i = 0; i < _settings.MaxDisplayItems; i++)
+        {
+            var itemActualIndex = _scrollOffset + i;
+            if (itemActualIndex >= _items.Count) break;
+
+            var item = _items[itemActualIndex];
+            var itemRect = new Rect(0, currentY, ClientSize.Width - scrollbarAreaWidth, _itemHeight);
+            var textRect = new Rect(10, currentY, ClientSize.Width - scrollbarAreaWidth - 20, _itemHeight);
+
+            if (i == _hoveredIndex && _hoverBackgroundBrush != null)
+                context.FillRectangle(itemRect, _hoverBackgroundBrush);
+
+            var displayText = $"• {item.Title}";
+
+            if (_listItemTextFormat != null && _defaultTextBrush != null)
+                context.DrawText(
+                    displayText,
+                    _listItemTextFormat,
+                    textRect,
+                    _defaultTextBrush,
+                    DrawTextOptions.Clip
+                );
+            currentY += _itemHeight;
+        }
+    }
+
+    private void DrawCustomScrollbar(ID2D1DeviceContext context)
+    {
+        if (_items.Count <= _settings.MaxDisplayItems || _scrollbarBrush == null)
+            return;
+
+        var trackHeight = ClientSize.Height - _headerHeight - 10;
+        float trackX = ClientSize.Width - _settings.ScrollbarWidth - 5;
+        var trackY = _headerHeight + 5;
+
+        var contentRatio = (float)_settings.MaxDisplayItems / _items.Count;
+        var thumbHeight = Math.Max(20, trackHeight * contentRatio);
+
+        var scrollableRatio = _items.Count - _settings.MaxDisplayItems == 0
+            ? 0
+            : (float)_scrollOffset / (_items.Count - _settings.MaxDisplayItems);
+
+        var thumbY = trackY + (trackHeight - thumbHeight) * scrollableRatio;
+
+        var thumbRect = new RectangleF(trackX, thumbY, _settings.ScrollbarWidth, thumbHeight);
+
+        // --- Rounded Scrollbar ---
+        var radius = _settings.ScrollbarWidth / 2f;
+        var roundedThumb = new RoundedRectangle(thumbRect, radius, radius);
+
+        using var thumbGeometry = context.Factory.CreateRoundedRectangleGeometry(roundedThumb);
+        context.FillGeometry(thumbGeometry, _scrollbarBrush);
+    }
+
+
+    // --- Base Class Overrides: Input & Logic ---
+    protected override void SavePosition(int x, int y)
+    {
+        Debug.WriteLine($"Saving position for Reader {_formInstanceIndex}: X={x}, Y={y}");
+        Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_X"].IntValue = x;
+        Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_Y"].IntValue = y;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+    }
+
+    protected override bool CanDrag()
+    {
+        // 1. Check global setting
+        if (!Beallitasok.RSS_Reader_Section["Húzás"].BoolValue) return false;
+
+        // 2. Check if mouse is in the Header area.
+        // Since CanDrag is called inside OnMouseDown, MousePosition is valid.
+        var clientPoint = PointToClient(Cursor.Position);
+        return clientPoint.Y <= _headerHeight;
+    }
+
+    protected override void OnChildMouseMove(MouseEventArgs e)
+    {
+        UpdateHoveredItem(e.Location);
+    }
+
+    protected override void OnChildMouseUp(MouseEventArgs e)
+    {
+        // Logic from old OnWidgetMouseClick
+        if (e.Button == MouseButtons.Left && _hoveredIndex != -1)
+        {
+            var actualItemIndex = _scrollOffset + _hoveredIndex;
+            if (actualItemIndex >= 0 && actualItemIndex < _items.Count)
+                try
+                {
+                    var link = _items[actualItemIndex].Link;
+                    if (!string.IsNullOrWhiteSpace(link) && Uri.IsWellFormedUriString(link, UriKind.Absolute))
+                        Process.Start(new ProcessStartInfo { FileName = link, UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
+        }
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        base.OnMouseWheel(e); // Always good practice
+
+        if (!_items.Any() || _items.Count <= _settings.MaxDisplayItems) return;
+
+        var scrollDirection = e.Delta > 0 ? -1 : 1;
+        var newScrollOffset = _scrollOffset + scrollDirection;
+
+        _scrollOffset = Math.Max(0, Math.Min(newScrollOffset, _items.Count - _settings.MaxDisplayItems));
+
+        UpdateHoveredItem(PointToClient(MousePosition));
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (_hoveredIndex != -1)
+        {
+            _hoveredIndex = -1;
+            _toolTip.SetToolTip(this, string.Empty);
             Invalidate();
-        }
-    }
-
-    private void OnWidgetMouseDown(object sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left && e.Y <= _headerHeight && Beallitasok.RSS_Reader_Section["Húzás"].BoolValue)
-        {
-            _isDragging = true;
-            _dragStartPoint = e.Location;
-        }
-    }
-
-    private void OnWidgetMouseMove(object sender, MouseEventArgs e)
-    {
-        if (_isDragging)
-        {
-            Left += e.X - _dragStartPoint.X;
-            Top += e.Y - _dragStartPoint.Y;
-        }
-        else
-        {
-            UpdateHoveredItem(e.Location);
         }
     }
 
     private void UpdateHoveredItem(Point mouseLocation)
     {
-        var newHoveredIndex = -1; // Relative to visible items
+        var newHoveredIndex = -1;
         var tooltipText = string.Empty;
 
         if (mouseLocation.Y > _headerHeight && mouseLocation.Y < _visibleWindowHeight)
         {
-            // Calculate index relative to the displayed item area
             var relativeY = mouseLocation.Y - _headerHeight;
             var potentialVisibleIndex = (int)(relativeY / _itemHeight);
 
@@ -232,307 +405,23 @@ internal class RssReader : RenderForm
         if (_hoveredIndex != newHoveredIndex)
         {
             _hoveredIndex = newHoveredIndex;
-            // Update tooltip only if necessary
             if (_toolTip.GetToolTip(this) != tooltipText) _toolTip.SetToolTip(this, tooltipText);
-            Invalidate(); // Redraw for hover effect
+            Invalidate(); // Triggers DrawContent
         }
     }
 
-
-    private void OnWidgetMouseUp(object sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left && _isDragging)
-        {
-            _isDragging = false;
-            SaveWidgetPosition(_formInstanceIndex, Left, Top);
-        }
-    }
-
-    private void OnWidgetMouseLeave(object sender, EventArgs e)
-    {
-        if (_hoveredIndex != -1)
-        {
-            _hoveredIndex = -1;
-            _toolTip.SetToolTip(this, string.Empty);
-            Invalidate();
-        }
-    }
-
-    private void OnWidgetMouseWheel(object sender, MouseEventArgs e)
-    {
-        if (!_items.Any() || _items.Count <= _settings.MaxDisplayItems) return;
-
-        var scrollDirection = e.Delta > 0 ? -1 : 1; // One item at a time for smoother feel
-        var newScrollOffset = _scrollOffset + scrollDirection;
-
-        // Clamp scrollOffset
-        _scrollOffset = Math.Max(0, Math.Min(newScrollOffset, _items.Count - _settings.MaxDisplayItems));
-
-        UpdateHoveredItem(PointToClient(MousePosition)); // Re-evaluate hover after scroll
-        Invalidate();
-    }
-
-    private void OnWidgetMouseClick(object sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left && !_isDragging && _hoveredIndex != -1)
-        {
-            var actualItemIndex = _scrollOffset + _hoveredIndex;
-            if (actualItemIndex >= 0 && actualItemIndex < _items.Count)
-                try
-                {
-                    var link = _items[actualItemIndex].Link;
-                    if (!string.IsNullOrWhiteSpace(link) && Uri.IsWellFormedUriString(link, UriKind.Absolute))
-                        Process.Start(new ProcessStartInfo { FileName = link, UseShellExecute = true });
-                    else
-                        Debug.WriteLine($"Invalid or empty link: {link}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error opening link: {ex.Message}");
-                }
-        }
-        else if (e.Button == MouseButtons.Right && e.Y <= _headerHeight)
-        {
-            // Show context menu 
-        }
-    }
+    // --- Async Logic & Helpers ---
 
     internal async Task OnUpdateTimerElapsedAsync()
     {
-        Debug.WriteLine($"RSS Feed Update Triggered for {_widgetTitle}");
         await LoadRssFeedAsync();
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _updateTimer?.Stop();
-            _updateTimer?.Dispose();
-            _toolTip?.Dispose();
-
-            // Dispose Direct2D resources
-            _defaultTextBrush?.Dispose();
-            _headerBrush?.Dispose();
-            _hoverBackgroundBrush?.Dispose();
-            _contentBackgroundBrush?.Dispose();
-            _scrollbarBrush?.Dispose();
-            _renderTarget?.Dispose(); // Must be disposed before factory if it holds resources from it
-
-            // Dispose DirectWrite resources
-            _titleTextFormat?.Dispose();
-            _listItemTextFormat?.Dispose();
-        }
-
-        base.Dispose(disposing);
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        if (DesignMode) return;
-        CreateDirect2DResources();
-    }
-
-    // Create Direct2D and DirectWrite resources
-    private void CreateDirect2DResources()
-    {
-        if (GraphicsFactories.D2DFactory == null || Handle == IntPtr.Zero || ClientSize.Width == 0 ||
-            ClientSize.Height == 0)
-            return;
-
-        // Dispose existing resources first
-        _renderTarget?.Dispose();
-        _defaultTextBrush?.Dispose();
-        _headerBrush?.Dispose();
-        _hoverBackgroundBrush?.Dispose();
-        _scrollbarBrush?.Dispose();
-        _titleTextFormat?.Dispose();
-        _listItemTextFormat?.Dispose();
-
-
-        var rtProps = new RenderTargetProperties
-        {
-            Type = RenderTargetType.Hardware,
-            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
-            DpiX = 96f,
-            DpiY = 96f,
-            Usage = RenderTargetUsage.GdiCompatible,
-            MinLevel = FeatureLevel.Level_9
-        };
-
-        var hwndProps = new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        };
-
-        _renderTarget = GraphicsFactories.D2DFactory
-            .CreateHwndRenderTarget(rtProps, hwndProps);
-
-        // --- Brushes ---
-        _defaultTextBrush = _renderTarget.CreateSolidColorBrush(ParseColor(_settings.TextColor, Colors.White));
-        _headerBrush = CreateHeaderBrush();
-        _contentBackgroundBrush =
-            _renderTarget.CreateSolidColorBrush(ParseColor(_settings.ContentBackgroundColor,
-                new Color4(0.2f, 0.2f, 0.2f, 0.8f)));
-        _hoverBackgroundBrush =
-            _renderTarget.CreateSolidColorBrush(ParseColor(_settings.HoverItemBackgroundColor, Colors.DarkGray));
-        _scrollbarBrush = _renderTarget.CreateSolidColorBrush(ParseColor(_settings.ScrollbarColor, Colors.DimGray));
-
-
-        // --- Text Formats ---
-        _titleTextFormat =
-            GraphicsFactories.DWriteFactory.CreateTextFormat(_settings.FontName, _settings.TitleFontSize);
-        _titleTextFormat.TextAlignment = TextAlignment.Center;
-        _titleTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
-
-        _listItemTextFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(_settings.FontName, _settings.FontSize);
-        _listItemTextFormat.TextAlignment = TextAlignment.Leading; // Left-aligned
-        _listItemTextFormat.ParagraphAlignment = ParagraphAlignment.Center; // Vertically centered in its layout box
-        _listItemTextFormat.WordWrapping = WordWrapping.NoWrap;
-        // Setup trimming
-        var trimmingSign = GraphicsFactories.DWriteFactory.CreateEllipsisTrimmingSign(_listItemTextFormat);
-        _listItemTextFormat.SetTrimming(
-            new Trimming { Granularity = TrimmingGranularity.Character, Delimiter = 0, DelimiterCount = 0 },
-            trimmingSign);
-    }
-
-    private ID2D1Brush CreateHeaderBrush()
-    {
-        return _renderTarget.CreateSolidColorBrush(ParseColor(_settings.HeaderColor, Colors.CornflowerBlue));
-    }
-
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-        if (_renderTarget == null || _items == null || DesignMode)
-            return;
-
-        _renderTarget.BeginDraw();
-        _renderTarget.Clear(Colors.Transparent);
-
-        DrawWidgetHeader(); // Draws the header
-
-        // --- Draw content area background ---
-        var contentAreaRect = new Rect(
-            0,
-            _headerHeight,
-            ClientSize.Width,
-            ClientSize.Height - _headerHeight
-        );
-        if (_contentBackgroundBrush != null)
-            _renderTarget.FillRectangle(contentAreaRect, _contentBackgroundBrush);
-        // --- End Draw content area background ---
-
-        DrawRssItems(); // Draws items on top of this new background
-        DrawCustomScrollbar(); // Draws scrollbar, also on top
-
-        var result = _renderTarget.EndDraw();
-        if (result.Failure)
-        {
-            Debug.WriteLine($"Direct2D EndDraw failed: {result.Code}");
-            CreateDirect2DResources();
-        }
-    }
-
-    private void DrawWidgetHeader()
-    {
-        var headerRect = new Rect(0, 0, ClientSize.Width, _headerHeight);
-        _renderTarget.FillRectangle(headerRect, _headerBrush);
-        _renderTarget.DrawText(_widgetTitle, _titleTextFormat, headerRect, _defaultTextBrush);
-    }
-
-    private void DrawRssItems()
-    {
-        var currentY = _headerHeight;
-        var scrollbarAreaWidth = _items.Count > _settings.MaxDisplayItems ? _settings.ScrollbarWidth + 5 : 0;
-
-
-        for (var i = 0; i < _settings.MaxDisplayItems; i++)
-        {
-            var itemActualIndex = _scrollOffset + i;
-            if (itemActualIndex >= _items.Count) break;
-
-            var item = _items[itemActualIndex];
-            var itemRect = new Rect(0, currentY, ClientSize.Width - scrollbarAreaWidth, _itemHeight);
-            var textRect = new Rect(
-                10,
-                currentY,
-                ClientSize.Width - scrollbarAreaWidth - 20,
-                _itemHeight
-            );
-
-
-            if (i == _hoveredIndex)
-                _renderTarget.FillRectangle(itemRect, _hoverBackgroundBrush);
-
-            var displayText = $"• {item.Title}";
-
-            _renderTarget.DrawText(
-                displayText,
-                _listItemTextFormat,
-                textRect, // Use the padded rect for text
-                _defaultTextBrush,
-                DrawTextOptions.Clip
-            );
-            currentY += _itemHeight;
-        }
-    }
-
-    private void DrawCustomScrollbar()
-    {
-        if (_items.Count <= _settings.MaxDisplayItems) return; // No scrollbar if not needed
-
-        var trackHeight = ClientSize.Height - _headerHeight - 10;
-        float trackX = ClientSize.Width - _settings.ScrollbarWidth - 5;
-        var trackY = _headerHeight + 5;
-
-        // Scrollbar Thumb
-        var contentRatio = (float)_settings.MaxDisplayItems / _items.Count;
-        var thumbHeight = Math.Max(20, trackHeight * contentRatio); // Min thumb height
-
-        var scrollableRatio = _items.Count - _settings.MaxDisplayItems == 0
-            ? 0
-            : (float)_scrollOffset / (_items.Count - _settings.MaxDisplayItems);
-        var thumbY = trackY + (trackHeight - thumbHeight) * scrollableRatio;
-
-        var thumbRect = new RectangleF(trackX, thumbY, _settings.ScrollbarWidth, thumbHeight);
-        _renderTarget.FillRoundedRectangle(
-            new RoundedRectangle(thumbRect, _settings.ScrollbarWidth / 2f, _settings.ScrollbarWidth / 2f),
-            _scrollbarBrush);
-    }
-
-
-    private Region CreateRoundedRectangleRegion(int width, int height, int cornerRadius)
-    {
-        if (width <= 0 || height <= 0) return new Region(new Rectangle(0, 0, 1, 1));
-
-        var path = new GraphicsPath();
-        if (cornerRadius <= 0)
-        {
-            path.AddRectangle(new Rectangle(0, 0, width, height));
-        }
-        else
-        {
-            var R = cornerRadius * 2;
-            path.AddArc(0, 0, R, R, 180, 90); // Top-left
-            path.AddArc(width - R, 0, R, R, 270, 90); // Top-right
-            path.AddArc(width - R, height - R, R, R, 0, 90); // Bottom-right
-            path.AddArc(0, height - R, R, R, 90, 90); // Bottom-left
-        }
-
-        path.CloseAllFigures();
-        return new Region(path);
     }
 
     private async Task LoadRssFeedAsync()
     {
         if (string.IsNullOrEmpty(_feedUrl))
         {
-            UpdateItemsWithError("RSS URL is not configured.");
+            UpdateItemsWithError("RSS URL not configured");
             return;
         }
 
@@ -552,31 +441,20 @@ internal class RssReader : RenderForm
                     var link = node["link"]?.InnerText ?? "#";
                     var description = node["description"]?.InnerText ?? node["summary"]?.InnerText ?? title;
                     newFeedItems.Add(new RssFeedItem(title, link, description));
-                    await OverlayMessenger.SendHeadlineAsync(title);
+                    await OverlayMessenger.SendHeadlineAsync(title, link);
                 }
 
             if (!newFeedItems.SequenceEqual(_items))
             {
                 _items = newFeedItems;
-                _scrollOffset = 0; // Reset scroll on new content
-                _hoveredIndex = -1; // Reset hover
-                _totalActualContentHeight = _headerHeight + _items.Count * _itemHeight;
-                Debug.WriteLine($"Loaded {_items.Count} items from {_widgetTitle}.");
+                _scrollOffset = 0;
+                _hoveredIndex = -1;
                 if (IsHandleCreated) Invalidate();
             }
         }
-        catch (HttpRequestException httpEx)
-        {
-            UpdateItemsWithError($"Network error: {httpEx.Message}");
-        }
-        catch (XmlException xmlEx)
-        {
-            UpdateItemsWithError($"Feed parsing error: {xmlEx.Message}");
-        }
         catch (Exception ex)
         {
-            UpdateItemsWithError($"An unexpected error occurred: {ex.Message}");
-            Debug.WriteLine($"Generic RSS Load Error: {ex}");
+            UpdateItemsWithError($"Error: {ex.Message}");
         }
     }
 
@@ -587,25 +465,16 @@ internal class RssReader : RenderForm
         _scrollOffset = 0;
         _hoveredIndex = -1;
         if (IsHandleCreated) Invalidate();
-        Debug.WriteLine($"RSS Reader Error for {_widgetTitle}: {errorMessage}");
     }
 
-
-    // Helper to parse color strings (names or hex)
     private Color4 ParseColor(string colorString, Color4 defaultColor)
     {
-        if (string.IsNullOrWhiteSpace(colorString))
-            return defaultColor;
-
+        if (string.IsNullOrWhiteSpace(colorString)) return defaultColor;
         try
         {
-            // Handle hex colors (like #RRGGBB or #AARRGGBB)
             if (colorString.StartsWith("#"))
             {
-                // Remove the # prefix
                 var hex = colorString.Substring(1);
-
-                // Parse the hex string
                 uint argb;
                 if (hex.Length == 6)
                 {
@@ -614,7 +483,7 @@ internal class RssReader : RenderForm
                 else if (hex.Length == 8)
                 {
                     argb = uint.Parse(hex, NumberStyles.HexNumber);
-                    // ARGB to ABGR conversion needed for Vortice
+                    // ARGB -> ABGR
                     argb = (argb & 0xFF00FF00) | ((argb & 0x00FF0000) >> 16) | ((argb & 0x000000FF) << 16);
                 }
                 else
@@ -625,13 +494,8 @@ internal class RssReader : RenderForm
                 return new Color4(argb);
             }
 
-            // Handle named colors using System.Drawing.Color
             var sdColor = ColorTranslator.FromHtml(colorString);
-            return new Color4(
-                sdColor.R / 255f,
-                sdColor.G / 255f,
-                sdColor.B / 255f,
-                sdColor.A / 255f);
+            return new Color4(sdColor.R / 255f, sdColor.G / 255f, sdColor.B / 255f, sdColor.A / 255f);
         }
         catch
         {
@@ -639,25 +503,29 @@ internal class RssReader : RenderForm
         }
     }
 
-    private static void SaveWidgetPosition(int instanceIndex, int left, int top)
+    protected override void Dispose(bool disposing)
     {
-        Debug.WriteLine($"Saving position for Reader {instanceIndex}: X={left}, Y={top}");
-        Beallitasok.RSS_Reader_Section[$"Olvasó_{instanceIndex}_Pos_X"].IntValue = left;
-        Beallitasok.RSS_Reader_Section[$"Olvasó_{instanceIndex}_Pos_Y"].IntValue = top;
-        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
+        if (disposing)
+        {
+            _updateTimer?.Stop();
+            _updateTimer?.Dispose();
+            _toolTip?.Dispose();
+            DisposeDeviceDependentResources();
+            _titleTextFormat?.Dispose();
+            _listItemTextFormat?.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 
     protected override void WndProc(ref Message m)
     {
         if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
-            RepositionOverlay();
+        {
+            Left = Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_X"].IntValue;
+            Top = Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_Y"].IntValue;
+        }
 
         base.WndProc(ref m);
-    }
-
-    private void RepositionOverlay()
-    {
-        Left = Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_X"].IntValue;
-        Top = Beallitasok.RSS_Reader_Section[$"Olvasó_{_formInstanceIndex}_Pos_Y"].IntValue;
     }
 }

@@ -1,24 +1,18 @@
 ﻿using System.Numerics;
-using SharpGen.Runtime;
 using Speaking_Clock;
 using Vanara.PInvoke;
-using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
-using Vortice.DXGI;
 using Vortice.Mathematics;
-using Vortice.WinForms;
-using AlphaMode = Vortice.DCommon.AlphaMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
 using Size = System.Drawing.Size;
 using Point = System.Drawing.Point;
-using SizeI = Vortice.Mathematics.SizeI;
 using RectangleF = System.Drawing.RectangleF;
-using ResultCode = Vortice.Direct2D1.ResultCode;
 
 namespace Speaking_clock.Widgets;
 
+// Game Logic remains unchanged
 public enum GameState
 {
     NotStarted,
@@ -194,7 +188,7 @@ public class MinesweeperGame
     }
 }
 
-public class Minesweeper : RenderForm
+public class Minesweeper : CompositionWidgetBase
 {
     private const float MinimizeButtonSize = 30f;
     private const float MinimizeButtonPadding = 5f;
@@ -209,28 +203,27 @@ public class Minesweeper : RenderForm
     private readonly int _rows;
     private readonly float _statusBarHeight = 40.0f;
 
-    private IDWriteFactory _dwriteFactory;
     private IDWriteTextFormat _emojiTextFormat;
 
     private float _gridOffsetY;
     private ID2D1SolidColorBrush _hiddenCellBrush;
-
-    // Dragging state
-    private bool _isDragging;
 
     // Minimize/expand state
     private bool _isMinimized = true;
     private ID2D1SolidColorBrush _lineBrush;
     private ID2D1SolidColorBrush _minimizeButtonBrush;
     private RectangleF _minimizeButtonRect;
+
+    // Dragging state handled manually to support Right-Click drag logic
     private Point _mouseDownLocation;
+
     private ID2D1SolidColorBrush _newGameButtonBrush;
 
     // Game UI elements
     private RectangleF _newGameButtonRect;
     private ID2D1SolidColorBrush _newGameButtonTextBrush;
     private IDWriteTextFormat _newGameButtonTextFormat;
-    private ID2D1HwndRenderTarget _renderTarget;
+
     private ID2D1SolidColorBrush _revealedCellBrush;
     private ID2D1SolidColorBrush _startButtonBrush;
     private RectangleF _startButtonRect;
@@ -240,43 +233,60 @@ public class Minesweeper : RenderForm
     private ID2D1SolidColorBrush _textBrush;
     private IDWriteTextFormat _textFormat;
 
+    // Pass 160, 40 as initial size (minimized state)
     public Minesweeper(int startX, int startY, int rows = 10, int cols = 10, int mines = 15)
+        : base(startX, startY, 160, 40)
     {
         _rows = rows;
         _cols = cols;
         _mines = mines;
         _game = new MinesweeperGame(_rows, _cols, _mines);
 
-        Text = "Aknakereső 💣";
-        FormBorderStyle = FormBorderStyle.None;
-        BackColor = Color.FromArgb(220, 220, 220);
-        ShowInTaskbar = false;
-        StartPosition = FormStartPosition.Manual;
-        Location = new Point(startX, startY);
-        DoubleBuffered = false;
-
-        // Start minimized
-        _isMinimized = true;
-        Width = 160;
-        Height = 40;
-
-        Show();
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
-
+        MouseDown -= OnBaseMouseDown;
+        MouseMove -= OnBaseMouseMove;
+        MouseUp -= OnBaseMouseUp;
         MouseDown += Minesweeper_MouseDown;
         MouseMove += Minesweeper_MouseMove;
         MouseUp += Minesweeper_MouseUp;
+
+
+        Text = "Aknakereső 💣";
+        BackColor = Color.FromArgb(220, 220, 220); // Used for clear color logic
+
+        // Initialize text formats using the Factory from the base class
+        CreateDeviceIndependentResources();
+
+        // Start minimized logic
+        _isMinimized = true;
+        UpdateFormSize(); // This will set ClientSize, triggering base Resize logic
         UpdateStatusMessage();
     }
 
-    protected override CreateParams CreateParams
+    private void CreateDeviceIndependentResources()
     {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
-        }
+        _textFormat?.Dispose();
+        _textFormat = _dwriteFactory.CreateTextFormat("Arial", FontWeight.Bold, FontStyle.Normal, FontStretch.Normal,
+            _cellSize * 0.5f);
+        _textFormat.TextAlignment = TextAlignment.Center;
+        _textFormat.ParagraphAlignment = ParagraphAlignment.Center;
+
+        _emojiTextFormat?.Dispose();
+        _emojiTextFormat = _dwriteFactory.CreateTextFormat("Segoe UI Emoji", FontWeight.Normal, FontStyle.Normal,
+            FontStretch.Normal, _cellSize * 0.6f);
+        _emojiTextFormat.TextAlignment = TextAlignment.Center;
+        _emojiTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
+
+        _statusTextFormat?.Dispose();
+        _statusTextFormat =
+            _dwriteFactory.CreateTextFormat("Arial", FontWeight.Normal, FontStyle.Normal, FontStretch.Normal, 16.0f);
+        _statusTextFormat.TextAlignment = TextAlignment.Leading;
+        _statusTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
+
+        _newGameButtonTextFormat?.Dispose();
+        _newGameButtonTextFormat =
+            _dwriteFactory.CreateTextFormat("Arial", FontWeight.SemiBold, FontStyle.Normal, FontStretch.Normal, 14.0f);
+        _newGameButtonTextFormat.TextAlignment = TextAlignment.Center;
+        _newGameButtonTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
     }
 
     private void UpdateFormSize()
@@ -284,7 +294,7 @@ public class Minesweeper : RenderForm
         if (_isMinimized)
         {
             ClientSize = new Size(160, 40);
-            _startButtonRect = new RectangleF(0, 0, Width, Height);
+            _startButtonRect = new RectangleF(0, 0, ClientSize.Width, ClientSize.Height);
         }
         else
         {
@@ -315,83 +325,17 @@ public class Minesweeper : RenderForm
         }
     }
 
-    protected override void OnHandleCreated(EventArgs e)
+    // Disable base generic dragging to use the specific Minesweeper logic
+    protected override bool CanDrag()
     {
-        base.OnHandleCreated(e);
-        InitializeDirect2DAndDirectWrite();
+        return false;
     }
 
-    private void InitializeDirect2DAndDirectWrite()
+    protected override void SavePosition(int x, int y)
     {
-        DisposeResources();
-        _dwriteFactory = GraphicsFactories.DWriteFactory;
-
-        _textFormat = _dwriteFactory.CreateTextFormat("Arial", FontWeight.Bold, FontStyle.Normal, FontStretch.Normal,
-            _cellSize * 0.5f);
-        _textFormat.TextAlignment = TextAlignment.Center;
-        _textFormat.ParagraphAlignment = ParagraphAlignment.Center;
-
-        _emojiTextFormat = _dwriteFactory.CreateTextFormat("Segoe UI Emoji", FontWeight.Normal, FontStyle.Normal,
-            FontStretch.Normal, _cellSize * 0.6f);
-        _emojiTextFormat.TextAlignment = TextAlignment.Center;
-        _emojiTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
-
-        _statusTextFormat =
-            _dwriteFactory.CreateTextFormat("Arial", FontWeight.Normal, FontStyle.Normal, FontStretch.Normal, 16.0f);
-        _statusTextFormat.TextAlignment = TextAlignment.Leading;
-        _statusTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
-
-        _newGameButtonTextFormat =
-            _dwriteFactory.CreateTextFormat("Arial", FontWeight.SemiBold, FontStyle.Normal, FontStretch.Normal, 14.0f);
-        _newGameButtonTextFormat.TextAlignment = TextAlignment.Center;
-        _newGameButtonTextFormat.ParagraphAlignment = ParagraphAlignment.Center;
-
-        var rtProps = new RenderTargetProperties
-        {
-            Type = RenderTargetType.Hardware,
-            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
-            DpiX = 96f,
-            DpiY = 96f,
-            Usage = RenderTargetUsage.GdiCompatible,
-            MinLevel = FeatureLevel.Level_9
-        };
-
-        var hwndProps = new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        };
-
-        _renderTarget = GraphicsFactories.D2DFactory
-            .CreateHwndRenderTarget(rtProps, hwndProps);
-        _lineBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.DimGray.ToArgb()));
-        _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.Black.ToArgb()));
-        _hiddenCellBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.LightGray.ToArgb()));
-        _revealedCellBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.WhiteSmoke.ToArgb()));
-        _statusBarBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.Silver.ToArgb()));
-        _newGameButtonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.DarkGray.ToArgb()));
-        _newGameButtonTextBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.White.ToArgb()));
-        _startButtonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.DarkGray.ToArgb()));
-        _minimizeButtonBrush =
-            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 80, 80, 85).ToArgb()));
-    }
-
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
-        UpdateFormSize();
-
-        if (_renderTarget != null && Handle != IntPtr.Zero && ClientSize.Width > 0 && ClientSize.Height > 0)
-        {
-            _renderTarget.Resize(new SizeI(ClientSize.Width, ClientSize.Height));
-            Invalidate();
-        }
-        else if (Handle != IntPtr.Zero && ClientSize.Width > 0 && ClientSize.Height > 0 && _renderTarget == null)
-        {
-            InitializeDirect2DAndDirectWrite();
-            Invalidate();
-        }
+        Beallitasok.WidgetSection["Aknakereső_X"].IntValue = x;
+        Beallitasok.WidgetSection["Aknakereső_Y"].IntValue = y;
+        Beallitasok.ConfigParser.SaveToFile(Path.Combine(Beallitasok.BasePath, Beallitasok.SetttingsFileName));
     }
 
     private void Minesweeper_MouseDown(object sender, MouseEventArgs e)
@@ -494,40 +438,43 @@ public class Minesweeper : RenderForm
         }
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    private void CheckAndCreateBrushes(ID2D1DeviceContext context)
     {
-        base.OnPaint(e);
-        if (_renderTarget == null || _game == null) return;
+        if (_lineBrush != null && _lineBrush.Factory.NativePointer == context.Factory.NativePointer) return;
 
-        _renderTarget.BeginDraw();
-        _renderTarget.Clear(new Color4(BackColor.R / 255.0f, BackColor.G / 255.0f, BackColor.B / 255.0f));
-
-        if (_isMinimized)
-            DrawMinimizedScreen(_renderTarget);
-        else
-            DrawGameScreen(_renderTarget);
-
-        try
-        {
-            _renderTarget.EndDraw();
-        }
-        catch (SharpGenException ex)
-        {
-            if (ex.ResultCode.Code == ResultCode.RecreateTarget.Code)
-                InitializeDirect2DAndDirectWrite();
-            else
-                throw;
-        }
+        DisposeBrushes();
+        _lineBrush = context.CreateSolidColorBrush(new Color4(Color.DimGray.ToArgb()));
+        _textBrush = context.CreateSolidColorBrush(new Color4(Color.Black.ToArgb()));
+        _hiddenCellBrush = context.CreateSolidColorBrush(new Color4(Color.LightGray.ToArgb()));
+        _revealedCellBrush = context.CreateSolidColorBrush(new Color4(Color.WhiteSmoke.ToArgb()));
+        _statusBarBrush = context.CreateSolidColorBrush(new Color4(Color.Silver.ToArgb()));
+        _newGameButtonBrush = context.CreateSolidColorBrush(new Color4(Color.DarkGray.ToArgb()));
+        _newGameButtonTextBrush = context.CreateSolidColorBrush(new Color4(Color.White.ToArgb()));
+        _startButtonBrush = context.CreateSolidColorBrush(new Color4(Color.DarkGray.ToArgb()));
+        _minimizeButtonBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 80, 80, 85).ToArgb()));
     }
 
-    private void DrawMinimizedScreen(ID2D1RenderTarget rt)
+    protected override void DrawContent(ID2D1DeviceContext context)
+    {
+        CheckAndCreateBrushes(context);
+
+        // Clear with specific background color for this game
+        context.Clear(new Color4(BackColor.R / 255.0f, BackColor.G / 255.0f, BackColor.B / 255.0f));
+
+        if (_isMinimized)
+            DrawMinimizedScreen(context);
+        else
+            DrawGameScreen(context);
+    }
+
+    private void DrawMinimizedScreen(ID2D1DeviceContext rt)
     {
         rt.FillRectangle(_startButtonRect, _startButtonBrush);
         rt.DrawRectangle(_startButtonRect, _lineBrush, 1.5f);
         DrawCenteredText(rt, "Aknakereső", _startButtonRect, _textFormat);
     }
 
-    private void DrawGameScreen(ID2D1RenderTarget rt)
+    private void DrawGameScreen(ID2D1DeviceContext rt)
     {
         // Draw game board (offset by _gridOffsetY)
         for (var r = 0; r < _rows; r++)
@@ -604,7 +551,7 @@ public class Minesweeper : RenderForm
 
         // Draw minimize button in its own area above the grid
         var buttonColor = new Color4(0.3f, 0.3f, 0.3f);
-        using (var buttonBrush = _renderTarget.CreateSolidColorBrush(buttonColor))
+        using (var buttonBrush = rt.CreateSolidColorBrush(buttonColor))
         {
             rt.FillRectangle(_minimizeButtonRect, buttonBrush);
             rt.DrawRectangle(_minimizeButtonRect, _lineBrush, 1.5f);
@@ -619,7 +566,7 @@ public class Minesweeper : RenderForm
         }
     }
 
-    private void DrawCenteredText(ID2D1RenderTarget rt, string text, RectangleF bounds, IDWriteTextFormat format)
+    private void DrawCenteredText(ID2D1DeviceContext rt, string text, RectangleF bounds, IDWriteTextFormat format)
     {
         if (format != null && _textBrush != null)
             rt.DrawText(text, format, (Rect)bounds, _textBrush);
@@ -639,9 +586,8 @@ public class Minesweeper : RenderForm
         Invalidate();
     }
 
-    private void DisposeResources()
+    private void DisposeBrushes()
     {
-        _renderTarget?.Dispose();
         _lineBrush?.Dispose();
         _textBrush?.Dispose();
         _hiddenCellBrush?.Dispose();
@@ -652,12 +598,6 @@ public class Minesweeper : RenderForm
         _startButtonBrush?.Dispose();
         _minimizeButtonBrush?.Dispose();
 
-        _textFormat?.Dispose();
-        _emojiTextFormat?.Dispose();
-        _statusTextFormat?.Dispose();
-        _newGameButtonTextFormat?.Dispose();
-
-        _renderTarget = null;
         _lineBrush = null;
         _textBrush = null;
         _hiddenCellBrush = null;
@@ -667,15 +607,19 @@ public class Minesweeper : RenderForm
         _newGameButtonTextBrush = null;
         _startButtonBrush = null;
         _minimizeButtonBrush = null;
-        _textFormat = null;
-        _emojiTextFormat = null;
-        _statusTextFormat = null;
-        _newGameButtonTextFormat = null;
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) DisposeResources();
+        if (disposing)
+        {
+            DisposeBrushes();
+            _textFormat?.Dispose();
+            _emojiTextFormat?.Dispose();
+            _statusTextFormat?.Dispose();
+            _newGameButtonTextFormat?.Dispose();
+        }
+
         base.Dispose(disposing);
     }
 

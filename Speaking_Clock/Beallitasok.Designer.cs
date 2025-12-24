@@ -906,6 +906,7 @@
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "Beallitasok";
+            ShowIcon = false;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Beállítások";
             FormClosing += Form1_FormClosing;

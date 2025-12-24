@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using ManagedBass;
 using Microsoft.Win32;
@@ -50,8 +49,7 @@ public partial class Beallitasok : Form
     internal static Section WidgetSection = ConfigParser["Widgetek"];
     internal static bool NotificationRepeate;
     internal static bool PlayingRadio;
-    private static RadioControl _radioControl;
-    internal static float RadioVolume;
+    internal static RadioControl _radioControl;
     internal static VirtualKeyboard Virtualkeyboard;
     internal static CustomWarningForm CustomWarningForm;
     internal static string Cordinates = "";
@@ -107,8 +105,7 @@ public partial class Beallitasok : Form
     internal static RadioPlayerWidget radioPlayerWidget;
     internal static WeatherWidget weatherWidget;
     internal static bool FullScreenApplicationRunning;
-    private static string FullScreenApplicationName;
-    internal static bool DLL_Injected;
+    private static Process FullScreenApplicationProcess;
     private WidgetSetup _widgetForm;
     internal bool DefaultBrowserPlayingAudio;
     internal Timer? DelayedLoadTimer;
@@ -171,7 +168,6 @@ public partial class Beallitasok : Form
         voiceRecognitionCheckbox.Checked = HangfelismerésSection["Bekapcsolva"].BoolValue;
         NoiseFilteringcheckBox.Checked = HangfelismerésSection["Zajszűrés"].BoolValue;
         DailyWallpaperBox.Checked = HáttérképSection["Bekapcsolva"].BoolValue;
-        RadioVolume = (float)(double)RádióSection["Hangerő"].IntValue / 100;
         ScreenCapturecheckBox.Checked = ScreenCaptureSection["Bekapcsolva"].BoolValue;
         OverlaycheckBox.Checked = ÁtfedésSection["Bekapcsolva"].BoolValue;
         OverlaytextBox.Text = OverlayMessenger.ConvertToMultiLine(ÁtfedésSection["Gombok"].StringValue);
@@ -209,10 +205,10 @@ public partial class Beallitasok : Form
         PostLauchSetup();
         isVisibleCore = true;
         Visible = true;
-#if DEBUG
+/*#if DEBUG
         Utils.EncryptFile($"{BasePath}\\Fájlok\\RadioStations.dat", $"{BasePath}\\Fájlok\\RadioStations_enc.dat",
             RadioDataKey);
-#endif
+#endif*/
         Activate();
         Focus();
     }
@@ -508,8 +504,8 @@ public partial class Beallitasok : Form
     private void szamlalo_Tick(object sender, EventArgs e)
     {
         JelenlegiIdo = DateTime.Now;
-        FullScreenApplicationName = FullScreenChecker.GetForegroundFullscreenProcessName();
-        FullScreenApplicationRunning = FullScreenApplicationName != null;
+        FullScreenApplicationProcess = FullScreenChecker.GetForegroundFullscreenProcess();
+        FullScreenApplicationRunning = FullScreenApplicationProcess != null;
         if (ÁtfedésSection["Bekapcsolva"].BoolValue) UpdateOverlay();
 
         if (HangfelismerésSection["Bekapcsolva"].BoolValue && DefaultBrowerPath != "")
@@ -526,7 +522,6 @@ public partial class Beallitasok : Form
             }
 
         if (NotificationEnabled)
-        {
             if (NextNotificationDate <= JelenlegiIdo)
             {
                 if (!FullScreenApplicationRunning)
@@ -541,10 +536,10 @@ public partial class Beallitasok : Form
                 }
                 else
                 {
-                    NextNotificationDate = JelenlegiIdo.AddMinutes(MinutesUntil(FigyelmeztetésSection["Óra"].IntValue, FigyelmeztetésSection["Perc"].IntValue));
+                    NextNotificationDate = JelenlegiIdo.AddMinutes(MinutesUntil(FigyelmeztetésSection["Óra"].IntValue,
+                        FigyelmeztetésSection["Perc"].IntValue));
                 }
             }
-        }
 
         var shouldAnnounce = BeszédSection["Igazítás"].BoolValue
             ? JelenlegiIdo.Minute % BeszédSection["Gyakoriság"].IntValue == 0
@@ -682,7 +677,6 @@ public partial class Beallitasok : Form
     {
         var dateTime = newDate.ToUniversalTime();
 
-        // Create a SYSTEMTIME structure from Vanara.PInvoke
         var st = new SYSTEMTIME
         {
             wYear = (ushort)dateTime.Year,
@@ -697,20 +691,10 @@ public partial class Beallitasok : Form
         if (!Kernel32.SetSystemTime(st)) throw new Win32Exception();
     }
 
-
     private void synctime_timer_Tick(object sender, EventArgs e)
     {
         Debug.WriteLine("Automatikus időszinkronizálás!");
-        try
-        {
-            button4.Enabled = false;
-            ChangeDateTime(GetNetworkTime(SzinkronizálásSection["Szerver"].StringValue));
-            button4.Enabled = true;
-        }
-        catch (Exception ex)
-        {
-            button4.Enabled = true;
-        }
+        DoTimeSync();
     }
 
     private void button5_Click(object sender, EventArgs e)
@@ -1038,7 +1022,6 @@ public partial class Beallitasok : Form
         {
             Debug.WriteLine("Új érték");
             RádióSection["Hangerő"].IntValue = BeszédSection["Hangerő"].IntValue;
-            RadioVolume = (float)(double)RádióSection["Hangerő"].IntValue / 100;
             ConfigParser.SaveToFile($"{BasePath}\\{SetttingsFileName}");
         }
 
@@ -1108,7 +1091,7 @@ public partial class Beallitasok : Form
     {
         Task.Run(async () =>
         {
-            if (RádióSection["Utolsó_frissítés"].DateTimeValue < DateTime.Now)
+            /*if (RádióSection["Utolsó_frissítés"].DateTimeValue < DateTime.Now)
             {
                 Debug.WriteLine("Updating radio stations...");
                 try
@@ -1123,14 +1106,12 @@ public partial class Beallitasok : Form
                 catch (Exception ex)
                 {
                 }
-            }
+            }*/
 
 
             if (File.Exists($"{BasePath}\\Fájlok\\RadioStations.dat"))
             {
-                var file2 = Encoding.UTF8
-                    .GetString(Utils.DecryptFileToMemory($"{BasePath}\\Fájlok\\RadioStations.dat", RadioDataKey))
-                    .Split("\n");
+                var file2 = File.ReadAllLines($"{BasePath}\\Fájlok\\RadioStations.dat");
                 for (var i = 0; i < file2.Length; i++)
                 {
                     var temp = file2[i].Split("\t");
@@ -1236,20 +1217,7 @@ public partial class Beallitasok : Form
         TrayIcon.ContextMenuStrip = TimerMenu;
 
 
-        if (SzinkronizálásSection["Automatikus"].BoolValue)
-        {
-            Debug.WriteLine("Automatikus időszinkronizálás!");
-            try
-            {
-                button4.Enabled = false;
-                ChangeDateTime(GetNetworkTime(SzinkronizálásSection["Szerver"].StringValue));
-                button4.Enabled = true;
-            }
-            catch (Exception ex)
-            {
-                button4.Enabled = true;
-            }
-        }
+        DoTimeSync();
 
         if (RSS_Reader_Section["Olvasó_1_Bekapcsolva"].BoolValue) EnableRSSReader(1);
         if (RSS_Reader_Section["Olvasó_2_Bekapcsolva"].BoolValue) EnableRSSReader(2);
@@ -1342,7 +1310,7 @@ public partial class Beallitasok : Form
             MouseButtonPress.ActivateMouseHook();
         }
 
-        OverlayMessenger.RunServerLoop();
+        Task.Run(() => { OverlayMessenger.RunServerLoop(); });
     }
 
     internal static void EnableRSSReader(int index)
@@ -1591,19 +1559,16 @@ public partial class Beallitasok : Form
 
     private static void UpdateOverlay()
     {
-        if (!FullScreenApplicationRunning || DllInjector.IsShowSimpleOverlay(FullScreenApplicationName)) return;
-        if (DllInjector.IsForceSimpleOverlay(FullScreenApplicationName))
+        if (!FullScreenApplicationRunning) return;
+        if (DllInjector.IsForceSimpleOverlay($"{FullScreenApplicationProcess.ProcessName}.exe"))
         {
             ActivateLegacyOverlay();
         }
         else
         {
             DeactivateLegacyOverlay();
-            if (!DLL_Injected)
-            {
-                DLL_Injected = true;
-                Task.Run(() => { DllInjector.InjectToForeground(); });
-            }
+            if (DllInjector.CurrentProcess == null)
+                Task.Run(() => { DllInjector.InjectToForeground(FullScreenApplicationProcess); });
 
             if (NotificationEnabled)
             {
@@ -1622,8 +1587,8 @@ public partial class Beallitasok : Form
 
     internal static int MinutesUntil(int targetHour, int targetMinute)
     {
-        DateTime now = DateTime.Now;
-        DateTime targetTime = new DateTime(
+        var now = DateTime.Now;
+        var targetTime = new DateTime(
             now.Year, now.Month, now.Day, targetHour, targetMinute, 0
         );
 
@@ -1631,7 +1596,23 @@ public partial class Beallitasok : Form
         if (targetTime <= now)
             targetTime = targetTime.AddDays(1);
 
-        TimeSpan difference = targetTime - now;
+        var difference = targetTime - now;
         return (int)Math.Round(difference.TotalMinutes);
+    }
+
+    private static void DoTimeSync()
+    {
+        if (!SzinkronizálásSection["Automatikus"].BoolValue) return;
+        Debug.WriteLine("Automatikus időszinkronizálás!");
+        try
+        {
+            button4.Enabled = false;
+            ChangeDateTime(GetNetworkTime(SzinkronizálásSection["Szerver"].StringValue));
+            button4.Enabled = true;
+        }
+        catch (Exception ex)
+        {
+            button4.Enabled = true;
+        }
     }
 }

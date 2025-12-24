@@ -51,10 +51,7 @@ public partial class CustomWarningForm : Form
             {
                 var TempDateTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month,
                     DateTime.Now.Day, _customHour, _customMinutes, 0);
-                if (TempDateTime < DateTime.Now)
-                {
-                    TempDateTime = TempDateTime.AddDays(1);
-                }
+                if (TempDateTime < DateTime.Now) TempDateTime = TempDateTime.AddDays(1);
 
                 Beallitasok.NextNotificationDate = TempDateTime;
             }
@@ -68,7 +65,8 @@ public partial class CustomWarningForm : Form
             if (lastItem is ToolStripMenuItem menuItem)
             {
                 menuItem.Checked = true;
-                menuItem.Text = $"Figyelmeztetés {Beallitasok.NextNotificationDate.Hour}:{Beallitasok.NextNotificationDate.Minute} kor";
+                menuItem.Text =
+                    $"Figyelmeztetés {Beallitasok.NextNotificationDate.Hour}:{Beallitasok.NextNotificationDate.Minute} kor";
             }
 
             (Beallitasok.QuickMenu.radApplicationMenu2.Items[Beallitasok.QuickMenu.radApplicationMenu2.Items.Count - 1]

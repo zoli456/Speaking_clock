@@ -1,69 +1,47 @@
 ﻿using System.Diagnostics;
-using System.Drawing.Drawing2D;
 using System.Numerics;
 using Speaking_Clock;
-using Vanara.PInvoke;
-using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
-using Vortice.DXGI;
 using Vortice.Mathematics;
-using Vortice.WinForms;
-using AlphaMode = Vortice.DCommon.AlphaMode;
-using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
-using Size = System.Drawing.Size;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Speaking_clock.Widgets;
 
-public class RadioPlayerWidget : RenderForm
+public class RadioPlayerWidget : CompositionWidgetBase
 {
     private readonly ContextMenuStrip _stationMenu;
     private readonly Timer _timer;
+    private ID2D1SolidColorBrush _backgroundBrush;
+
+    // State
     private string _currentStation = "Nincs állomás kiválasztva";
-    private Point _dragStartPoint;
-    private bool _isDragging;
     internal bool _isPlaying;
-    private ID2D1HwndRenderTarget _renderTarget;
-    private float _scale = 1.0f;
+
+    // Resources
     private ID2D1SolidColorBrush _textBrush;
     private float _volume = 0.05f; // Default volume: 5%
-    private string currentRadioName, currentRadioURL;
+    internal string currentRadioName, currentRadioURL;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="RadioPlayerWidget" /> class.
     /// </summary>
-    /// <param name="startX"></param>
-    /// <param name="startY"></param>
-    /// <param name="scale"></param>
+    /// <param name="startX">Initial X position</param>
+    /// <param name="startY">Initial Y position</param>
+    /// <param name="scale">Scaling factor</param>
     public RadioPlayerWidget(int startX, int startY, float scale = 1f)
+        : base(startX, startY, 300, 100) // Pass dimensions to base
     {
-        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-        AllowTransparency = true;
-        BackColor = Color.Transparent;
-
         Text = "Radio Player";
-        FormBorderStyle = FormBorderStyle.None;
-        Size = new Size(300, 125);
-        ShowInTaskbar = false;
-        Opacity = 0.9f;
-        Region = CreateRoundedRectangleRegion(Size.Width, Size.Height, 20);
-        _scale = scale;
-
-        StartPosition = FormStartPosition.Manual;
-        Location = new Point(startX, startY);
 
         // Initialize station selection menu
         _stationMenu = new ContextMenuStrip();
         PopulateStationMenu();
 
-        MouseDown += RadioPlayer_MouseDown;
-        MouseMove += RadioPlayer_MouseMove;
-        MouseUp += RadioPlayer_MouseUp;
+        // Bind specific input events
         DoubleClick += RadioPlayer_DoubleClick;
         MouseWheel += RadioPlayer_MouseWheel;
-        Closed += RadioPlayer_Closed;
 
         // Set up a timer for updating volume
         _timer = new Timer { Interval = 5000 };
@@ -71,53 +49,24 @@ public class RadioPlayerWidget : RenderForm
         {
             if (Beallitasok.RádióSection["Hangerő"].IntValue != (int)(_volume * 100))
             {
-                Debug.WriteLine("Hangerő frissítés");
+                Debug.WriteLine($"Hangerő frissítés({(int)(_volume * 100)})");
                 Beallitasok.RádióSection["Hangerő"].IntValue = (int)(_volume * 100);
                 Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             }
         };
         _timer.Start();
-
-        DoubleBuffered = false;
-
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
-
-
-        Show();
     }
 
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
-        }
-    }
-
-    public float GetScaleFactor()
-    {
-        return _scale;
-    }
-
-    public void SetScaleFactor(float value)
-    {
-        if (value > 0 && value != _scale)
-        {
-            _scale = value;
-            CreateRenderTarget();
-            Invalidate();
-        }
-    }
+    // --- Base Class Overrides ---
 
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+
+        // Initialize volume from settings
         if (Beallitasok.RádióSection["Hangerő"].IntValue == -1)
         {
             Beallitasok.RádióSection["Hangerő"].IntValue = Beallitasok.BeszédSection["Hangerő"].IntValue;
-            Beallitasok.RadioVolume = (float)(double)Beallitasok.RádióSection["Hangerő"].IntValue / 100;
             Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
             _volume = (float)(double)Beallitasok.RádióSection["Hangerő"].IntValue / 100;
         }
@@ -125,77 +74,76 @@ public class RadioPlayerWidget : RenderForm
         {
             _volume = (float)(double)Beallitasok.RádióSection["Hangerő"].IntValue / 100;
         }
-
-        CreateRenderTarget();
     }
 
-    private void CreateRenderTarget()
+    protected override bool CanDrag()
     {
-        _renderTarget?.Dispose();
-        var rtProps = new RenderTargetProperties
-        {
-            Type = RenderTargetType.Hardware,
-            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
-            DpiX = 96f,
-            DpiY = 96f,
-            Usage = RenderTargetUsage.GdiCompatible,
-            MinLevel = FeatureLevel.Level_9
-        };
-
-        var hwndProps = new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        };
-
-        _renderTarget = GraphicsFactories.D2DFactory
-            .CreateHwndRenderTarget(rtProps, hwndProps);
-        _textBrush?.Dispose();
-        _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
+        // Logic from original MouseDown check
+        return Beallitasok.RSS_Reader_Section["Húzás"].BoolValue;
     }
 
-    protected override void OnResize(EventArgs e)
+    protected override void SavePosition(int x, int y)
     {
-        base.OnResize(e);
-        if (_renderTarget != null)
-        {
-            CreateRenderTarget();
-            Invalidate();
-        }
+        Beallitasok.WidgetSection["Rádió_X"].IntValue = x;
+        Beallitasok.WidgetSection["Rádió_Y"].IntValue = y;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    protected override void OnChildMouseDown(MouseEventArgs e)
     {
-        base.OnPaint(e);
-        if (_renderTarget == null)
-            return;
+        // Base handles Left click dragging. We handle Right click menu.
+        if (e.Button == MouseButtons.Right) _stationMenu.Show(this, e.Location);
+    }
 
-        _renderTarget.BeginDraw();
-        _renderTarget.Clear(new Color4(0, 0, 0, 0));
+    protected override void DrawContent(ID2D1DeviceContext context)
+    {
+        // Create Resources if needed
+        if (_textBrush == null || _textBrush.NativePointer == IntPtr.Zero)
+            _textBrush = context.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
 
-        using var textFormat = GraphicsFactories.DWriteFactory.CreateTextFormat(
+        if (_backgroundBrush == null || _backgroundBrush.NativePointer == IntPtr.Zero)
+            _backgroundBrush = context.CreateSolidColorBrush(new Color4(0f, 0f, 0f, 0.8f));
+
+        // Draw Background (
+        var rect = new RectangleF(0, 0, ClientSize.Width, ClientSize.Height);
+        var roundedRect = new RoundedRectangle(rect, 20, 20);
+
+        context.FillRoundedRectangle(roundedRect, _backgroundBrush);
+
+        // Create Text Layout
+        using var textFormat = _dwriteFactory.CreateTextFormat(
             "Arial",
             FontWeight.Normal,
             FontStyle.Normal,
             FontStretch.Normal,
-            18 * _scale
+            18
         );
 
-        using var textLayout = GraphicsFactories.DWriteFactory.CreateTextLayout(
+        using var textLayout = _dwriteFactory.CreateTextLayout(
             $"Állomás: {_currentStation}\n" +
             $"Állapot: {(_isPlaying ? "Lejátszás" : "Szünet")}\n" +
             $"Hangerő: {Math.Round(_volume * 100)}%",
             textFormat,
-            Size.Width,
-            Size.Height
+            ClientSize.Width,
+            ClientSize.Height
         );
+
         textLayout.TextAlignment = TextAlignment.Center;
         textLayout.ParagraphAlignment = ParagraphAlignment.Center;
 
-        _renderTarget.DrawTextLayout(new Vector2(0, 0), textLayout, _textBrush);
+        // Draw Text
+        context.DrawTextLayout(new Vector2(0, 0), textLayout, _textBrush);
+    }
 
-        _renderTarget.EndDraw();
+    // --- Radio Logic ---
+
+    public void SetScaleFactor(float value)
+    {
+        if (value > 0 && value != _scale)
+        {
+            _scale = value;
+            Invalidate();
+        }
     }
 
     private void RadioPlayer_DoubleClick(object sender, EventArgs e)
@@ -219,7 +167,15 @@ public class RadioPlayerWidget : RenderForm
         OnlineRadioPlayer.SetVolume(_volume);
     }
 
-    private async Task PlayRadio(string stationUrl, string stationName)
+    internal void ChangeVolume(float new_int)
+    {
+        _volume = Math.Clamp(new_int, 0.0f, 1.0f);
+        Debug.WriteLine($"Volume adjusted to {_volume * 100}%");
+        Invalidate();
+        OnlineRadioPlayer.SetVolume(_volume);
+    }
+
+    internal async Task PlayRadio(string stationUrl, string stationName)
     {
         while (Beallitasok.Lejátszás) await Task.Delay(100);
         try
@@ -243,7 +199,7 @@ public class RadioPlayerWidget : RenderForm
         }
     }
 
-    private void PauseRadio()
+    internal void PauseRadio()
     {
         if (string.IsNullOrEmpty(currentRadioName) || string.IsNullOrEmpty(currentRadioURL)) return;
 
@@ -295,81 +251,16 @@ public class RadioPlayerWidget : RenderForm
         }
     }
 
-
-    private void RadioPlayer_MouseDown(object sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left && Beallitasok.RSS_Reader_Section["Húzás"].BoolValue)
-        {
-            _isDragging = true;
-            _dragStartPoint = e.Location;
-        }
-        else if (e.Button == MouseButtons.Right)
-        {
-            _stationMenu.Show(this, e.Location);
-        }
-    }
-
-    private void RadioPlayer_MouseMove(object sender, MouseEventArgs e)
-    {
-        if (_isDragging)
-            Location = new Point(
-                Location.X + e.X - _dragStartPoint.X,
-                Location.Y + e.Y - _dragStartPoint.Y
-            );
-    }
-
-    private void RadioPlayer_MouseUp(object sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left)
-        {
-            _isDragging = false;
-            Beallitasok.WidgetSection["Rádió_X"].IntValue = Left;
-            Beallitasok.WidgetSection["Rádió_Y"].IntValue = Top;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
-        }
-    }
-
-    private void RadioPlayer_Closed(object? sender, EventArgs e)
-    {
-        _textBrush?.Dispose();
-        _renderTarget?.Dispose();
-        _timer?.Dispose();
-    }
-
-    private Region CreateRoundedRectangleRegion(int width, int height, int cornerRadius)
-    {
-        var path = new GraphicsPath();
-        path.AddArc(0, 0, cornerRadius * 2, cornerRadius * 2, 180, 90);
-        path.AddArc(width - cornerRadius * 2, 0, cornerRadius * 2, cornerRadius * 2, 270, 90);
-        path.AddArc(width - cornerRadius * 2, height - cornerRadius * 2, cornerRadius * 2, cornerRadius * 2, 0, 90);
-        path.AddArc(0, height - cornerRadius * 2, cornerRadius * 2, cornerRadius * 2, 90, 90);
-        path.CloseAllFigures();
-        return new Region(path);
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
             _textBrush?.Dispose();
-            _renderTarget?.Dispose();
+            _backgroundBrush?.Dispose();
+            _stationMenu?.Dispose();
             _timer?.Dispose();
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override void WndProc(ref Message m)
-    {
-        if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
-            RepositionOverlay();
-
-        base.WndProc(ref m);
-    }
-
-    private void RepositionOverlay()
-    {
-        Left = Beallitasok.WidgetSection["Rádió_X"].IntValue;
-        Top = Beallitasok.WidgetSection["Rádió_Y"].IntValue;
     }
 }

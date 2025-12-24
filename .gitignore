@@ -18,6 +18,7 @@ QuestionData.json
 credentials.json
 countries.json
 logo.dat
+Installer\Output\Speaking_clock_setup.exe
 
 Speaking_Clock/Assets/Flags/*.png
 Speaking_Clock/Assets/MoonIcons/*.png

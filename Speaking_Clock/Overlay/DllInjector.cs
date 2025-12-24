@@ -13,31 +13,19 @@ public static class DllInjector
 {
     private static readonly string dll32Path = "SpeakingClockOverlayx86.dll";
     private static readonly string dll64Path = "SpeakingClockOverlayx64.dll";
-    internal static Process CurrentProcess;
+    internal static Process? CurrentProcess;
 
-    internal static void InjectToForeground()
+    internal static void InjectToForeground(Process fullscreenProcess)
     {
         // Get process ID from window handle
-        User32.GetWindowThreadProcessId(FullScreenChecker.GetForegroundFullscreenWindow(), out var pid);
-        if (pid == 0)
+        if (fullscreenProcess.Id == 0)
         {
             Debug.WriteLine("No process found for foreground window.");
             return;
         }
 
-
-        try
-        {
-            CurrentProcess = Process.GetProcessById((int)pid);
-        }
-        catch (ArgumentException)
-        {
-            Debug.WriteLine("Process no longer exists.");
-            return;
-        }
-
         // Determine if target process is 32-bit
-        var is32Bit = IsProcess32Bit(CurrentProcess);
+        var is32Bit = IsProcess32Bit(fullscreenProcess);
 
         // Pick correct DLL and injector
         var dllPath = is32Bit ? dll32Path : dll64Path;
@@ -47,7 +35,7 @@ public static class DllInjector
         {
             FileName = Path.Combine(Beallitasok.BasePath, "DllInjector", injectorExe),
             Arguments =
-                $"inject \"{CurrentProcess.ProcessName}.exe\" \"{Path.Combine(Beallitasok.BasePath, "DllInjector", dllPath)}\" 1000",
+                $"inject \"{fullscreenProcess.ProcessName}.exe\" \"{Path.Combine(Beallitasok.BasePath, "DllInjector", dllPath)}\" 1000",
             WorkingDirectory = Path.Combine(Beallitasok.BasePath, "DllInjector"),
             CreateNoWindow = true,
             UseShellExecute = true, // Required for Verb
@@ -57,11 +45,18 @@ public static class DllInjector
 
         Process.Start(startInfo);
 
-        Debug.WriteLine($"Injected {dllPath} into {CurrentProcess.ProcessName}.exe ({(is32Bit ? "x86" : "x64")}).");
+        Debug.WriteLine($"Injected {dllPath} into {fullscreenProcess.ProcessName}.exe ({(is32Bit ? "x86" : "x64")}).");
+
+        CurrentProcess = fullscreenProcess;
+
         CurrentProcess.WaitForExit();
         Beallitasok.DeactivateLegacyOverlay();
-        Beallitasok.DLL_Injected = false;
         Debug.WriteLine($"{CurrentProcess.ProcessName} exited, resetting DLL injection state.");
+        CurrentProcess = null;
+
+        if (Beallitasok.PlayingRadio)
+            if (Beallitasok.radioPlayerWidget == null || Beallitasok.radioPlayerWidget.IsDisposed)
+                OnlineRadioPlayer.Stop();
     }
 
 
@@ -88,19 +83,6 @@ public static class DllInjector
         return blockedProcesses.Contains(Path.GetFileNameWithoutExtension(procName),
                    StringComparer.OrdinalIgnoreCase) ||
                UserBlockedProcesses.Contains(Path.GetFileName(procName), StringComparer.OrdinalIgnoreCase);
-    }
-
-    internal static bool IsShowSimpleOverlay(string procName)
-    {
-        string[] blockedProcesses =
-        {
-            "explorer", "SearchUI", "RuntimeBroker", "ApplicationFrameHost", "ShellExperienceHost", "dwm", "idlewatch",
-            "steamwebhelper", "League of Legends", "zoom", "ms-teams", "teams", "discord", "spotify"
-        };
-
-        return blockedProcesses.Any(builtIn =>
-            Path.GetFileNameWithoutExtension(procName)
-                .StartsWith(builtIn, StringComparison.OrdinalIgnoreCase));
     }
 
     internal static bool IsForcedExternal(string procName)

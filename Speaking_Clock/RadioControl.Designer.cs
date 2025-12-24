@@ -123,7 +123,6 @@
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "RadioControl";
-            TopMost = true;
             Shown += RadioControl_Shown;
             MouseDown += RadioControl_MouseDown;
             ((System.ComponentModel.ISupportInitialize)RadioVolumetrackBar).EndInit();

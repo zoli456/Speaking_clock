@@ -27,11 +27,10 @@ public partial class RadioControl : Form
         // Get taskbar position using SHAppBarMessage with ABMsg.ABM_GETTASKBARPOS
         if (SHAppBarMessage(ABM.ABM_GETTASKBARPOS, ref appBarData) != IntPtr.Zero)
         {
-            // SHAppBarMessage succeeded
             var taskbarRect = appBarData.rc;
 
             // Determine screen position of the clock (system tray)
-            var screen = Screen.FromHandle(Handle); // Use current screen handle
+            var screen = Screen.FromHandle(Handle);
             var taskbarPosition = GetTaskbarPosition(taskbarRect, screen);
 
 
@@ -52,8 +51,7 @@ public partial class RadioControl : Form
                     break;
             }
 
-            // Ensure form stays on top
-            TopMost = true;
+            TopMost = false;
             _stationMenu = new ContextMenuStrip();
             PopulateStationMenu();
         }
@@ -69,7 +67,7 @@ public partial class RadioControl : Form
         var taskbarWidth = taskbarRect.right - taskbarRect.left;
         var taskbarHeight = taskbarRect.bottom - taskbarRect.top;
 
-        // Check if the taskbar is at the bottom or top (by comparing the height to the screen's height)
+        // Check if the taskbar is at the bottom or top
         if (taskbarHeight > taskbarWidth)
         {
             // The taskbar is on the left or right of the screen
@@ -101,6 +99,11 @@ public partial class RadioControl : Form
     //OnlineRadioPlayer.waveOut.Volume = (float) ((decimal) RadioVolumetrackBar.Value / 100)
     private void button1_Click(object sender, EventArgs e)
     {
+        StopPlayback();
+    }
+
+    internal void StopPlayback()
+    {
         Beallitasok.PlayingRadio = false;
         OnlineRadioPlayer.Stop();
         Beallitasok.SafeInvoke(Beallitasok.SayItNowbutton, () => { Beallitasok.SayItNowbutton.Enabled = true; });
@@ -110,10 +113,13 @@ public partial class RadioControl : Form
     private void RadiotrackBar_Scroll(object sender, EventArgs e)
     {
         _trackbarScrolling = true;
+        ChangeVolume((float)((decimal)RadiotrackBar.Value / 100));
+    }
+
+    internal void ChangeVolume(float volume)
+    {
         Volumelabel.Text = $"{RadiotrackBar.Value}%";
-        OnlineRadioPlayer.SetVolume((float)((decimal)RadiotrackBar.Value / 100));
-        // OnlineRadioPlayer.WaveOut.Volume = (float)((decimal)RadiotrackBar.Value / 100);
-        Beallitasok.RadioVolume = (float)((decimal)RadiotrackBar.Value / 100);
+        OnlineRadioPlayer.SetVolume(volume);
         Beallitasok.RádióSection["Hangerő"].IntValue = RadiotrackBar.Value;
     }
 
@@ -141,10 +147,8 @@ public partial class RadioControl : Form
     {
         if (_draggingEnabled && e.Button == MouseButtons.Left)
         {
-            // Call ReleaseCapture to release the mouse capture
             User32.ReleaseCapture();
 
-            // Send a message to the window to start dragging
             User32.SendMessage(Handle, (uint)User32.WindowMessage.WM_NCLBUTTONDOWN, (IntPtr)Htcaption, IntPtr.Zero);
         }
 

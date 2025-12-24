@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
@@ -24,15 +23,13 @@ internal class OverlayMessenger
     private static CancellationTokenSource readLoopCts;
     private static string ButtonTexts;
 
-    public static async Task RunServerLoop(CancellationToken token = default)
+    internal static async Task RunServerLoop(CancellationToken token = default)
     {
         var warningText = new string[Beallitasok.warningTimes.Length + 1];
         for (var i = 0; i < Beallitasok.warningTimes.Length; i++)
             warningText[i] = $"{Beallitasok.warningTimes[i]} perc múlva";
-
         warningText[Beallitasok.warningTimes.Length] = "Kikapcsolás";
         lastOptions = warningText;
-
         while (!token.IsCancellationRequested)
         {
             try
@@ -41,20 +38,30 @@ internal class OverlayMessenger
                 pipe = CreateNamedPipeWithSecurity(PipeName);
                 await pipe.WaitForConnectionAsync(token);
                 Debug.WriteLine("DLL connected.");
-
                 reader = new StreamReader(pipe, Encoding.UTF8);
-                writer = new StreamWriter(pipe, Encoding.UTF8) { AutoFlush = true };
-
+                writer = new StreamWriter(pipe, Encoding.UTF8)
+                {
+                    AutoFlush = true
+                };
+                while (DllInjector.CurrentProcess == null) await Task.Delay(10);
                 await SendOptionsAsync(lastOptions);
                 await SetButtonTextAsync("X");
                 await SendOptionsAsync(lastOptions);
-                ButtonTexts = GetConfigForExecutable(Beallitasok.ÁtfedésSection["Gombok"].StringValue,
-                    $"{DllInjector.CurrentProcess.ProcessName}.exe");
+                await SendRadioStationsAsync(Beallitasok.RadioNames.ToArray());
+                await SendRadioVolumeAsync(Beallitasok.RádióSection["Hangerő"].IntValue.ToString());
+                ButtonTexts =
+                    GetConfigForExecutable(Beallitasok.ÁtfedésSection["Gombok"].StringValue,
+                        $"{DllInjector.CurrentProcess.ProcessName}.exe");
                 if (ButtonTexts != "") await SendScreenButtonAsync(ButtonTexts);
                 if (DllInjector.IsForcedExternal($"{DllInjector.CurrentProcess.ProcessName}.exe"))
                     await SetForcedExternal(true);
-                else
-                    await SetForcedExternal(CheckForProblematicCases(DllInjector.CurrentProcess));
+                else await SetForcedExternal(CheckForProblematicCases(DllInjector.CurrentProcess));
+
+                if (Beallitasok.PlayingRadio)
+                    if (Beallitasok.radioPlayerWidget != null && !Beallitasok.radioPlayerWidget.IsDisposed)
+                        SendSetStationAsync(
+                            Beallitasok.RadioNames.IndexOf(Beallitasok.radioPlayerWidget.currentRadioName));
+
                 readLoopCts = new CancellationTokenSource();
                 await ReadMessagesLoop(readLoopCts.Token);
             }
@@ -109,7 +116,7 @@ internal class OverlayMessenger
         return new NamedPipeServerStream(PipeDirection.InOut, true, false, handle);
     }
 
-    public static async Task SendOptionsAsync(string[] options)
+    private static async Task SendOptionsAsync(string[] options)
     {
         lastOptions = options;
         if (pipe?.IsConnected == true)
@@ -120,12 +127,42 @@ internal class OverlayMessenger
         }
     }
 
-
-    public static async Task SendHeadlineAsync(string headline)
+    private static async Task SendSetStationAsync(int station)
     {
         if (pipe?.IsConnected == true)
         {
-            var msg = "HEADLINE:" + headline + "\n";
+            var msg = "RADIO_CURRENT:" + station;
+            await writer.WriteLineAsync(msg);
+            Debug.WriteLine("Sent: " + msg.Trim());
+        }
+    }
+
+    private static async Task SendRadioStationsAsync(string[] options)
+    {
+        lastOptions = options;
+        if (pipe?.IsConnected == true)
+        {
+            var msg = "RADIO_LIST:" + string.Join(",", options);
+            await writer.WriteLineAsync(msg);
+            Debug.WriteLine("Sent: " + msg.Trim());
+        }
+    }
+
+    private static async Task SendRadioVolumeAsync(string radio_volume)
+    {
+        if (pipe?.IsConnected == true)
+        {
+            var msg = "RADIO_VOLUME:" + radio_volume;
+            await writer.WriteLineAsync(msg);
+            Debug.WriteLine("Sent: " + msg.Trim());
+        }
+    }
+
+    public static async Task SendHeadlineAsync(string headline, string link)
+    {
+        if (pipe?.IsConnected == true)
+        {
+            var msg = "HEADLINE:" + headline + "|" + link + "\n";
             await writer.WriteLineAsync(msg);
             Debug.WriteLine("Sent: " + msg.Trim());
         }
@@ -211,12 +248,60 @@ internal class OverlayMessenger
                 if (line.StartsWith("BUTTON_CLICKED:", StringComparison.OrdinalIgnoreCase))
                     Beallitasok.SimulateRealKeyPress(
                         Utils.CharToHexKeyCode(line.Split(":")[1]));
+                if (line.StartsWith("HEADLINE_CLICKED:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var temp = line.IndexOf(':');
+                    Utils.OpenWebpageAndReturn(line.Substring(temp + 1), DllInjector.CurrentProcess);
+                }
+
+                if (line.StartsWith("Radio_selected:", StringComparison.OrdinalIgnoreCase))
+                    ChangeRadioStation(int.Parse(line.Split(":")[1]));
+                if (line.StartsWith("Radio_volume_changed:", StringComparison.OrdinalIgnoreCase))
+                    ChangeRadioVolume(int.Parse(line.Split(":")[1]));
+                if (line.StartsWith("Radio_stop:", StringComparison.OrdinalIgnoreCase)) StopRadio();
             }
         }
         catch (IOException)
         {
             Debug.WriteLine("Read loop: connection lost.");
         }
+    }
+
+    private static void ChangeRadioStation(int id)
+    {
+        if (Beallitasok.radioPlayerWidget != null && !Beallitasok.radioPlayerWidget.IsDisposed)
+        {
+            Beallitasok.radioPlayerWidget.PlayRadio(Beallitasok.RandioUrLs[id], Beallitasok.RadioNames[id]);
+        }
+        else
+        {
+            if (Beallitasok.PlayingRadio) OnlineRadioPlayer.Stop();
+            OnlineRadioPlayer.PlayStreamAsync(Beallitasok.RandioUrLs[id]);
+            Beallitasok.PlayingRadio = true;
+        }
+    }
+
+    private static void ChangeRadioVolume(int number)
+    {
+        if (Beallitasok.radioPlayerWidget != null && !Beallitasok.radioPlayerWidget.IsDisposed)
+            Beallitasok.radioPlayerWidget.ChangeVolume((float)number / 100);
+        if (Beallitasok.PlayingRadio)
+            OnlineRadioPlayer.SetVolume((float)number / 100);
+        else
+            Beallitasok.RádióSection["Hangerő"].IntValue = number;
+    }
+
+    private static void StopRadio()
+    {
+        if (Beallitasok.PlayingRadio)
+        {
+            if (Beallitasok.radioPlayerWidget != null && !Beallitasok.radioPlayerWidget.IsDisposed)
+                Beallitasok.radioPlayerWidget.PauseRadio();
+            else
+                OnlineRadioPlayer.Stop();
+        }
+
+        Beallitasok.PlayingRadio = false;
     }
 
 
@@ -230,7 +315,6 @@ internal class OverlayMessenger
     {
         if (string.IsNullOrWhiteSpace(multiLineConfig)) return string.Empty;
 
-        // Split by newline, trim each line, remove empty ones, and join with the custom separator.
         var lines = multiLineConfig.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         var nonEmptyLines = lines.Select(line => line.Trim()).Where(line => !string.IsNullOrEmpty(line));
         return string.Join(LINE_SEPARATOR.ToString(), nonEmptyLines);
@@ -244,8 +328,6 @@ internal class OverlayMessenger
     public static string ConvertToMultiLine(string singleLineConfig)
     {
         if (string.IsNullOrWhiteSpace(singleLineConfig)) return string.Empty;
-
-        // Split by the custom separator and join with the standard newline character.
         var lines = singleLineConfig.Split(LINE_SEPARATOR);
         return string.Join(Environment.NewLine, lines);
     }
@@ -275,7 +357,6 @@ internal class OverlayMessenger
             // Check if the line is valid (3 parts) and matches the executable name (case-insensitive)
             if (parts.Length == 3 && parts[0].Trim().Equals(executableName, StringComparison.OrdinalIgnoreCase))
             {
-                // We need the second and third parts (e.g., "Gyorsítás" and "F8")
                 var buttonText = parts[1].Trim();
                 var buttonId = parts[2].Trim();
                 buttonParts.Add($"{buttonText}{PART_SEPARATOR}{buttonId}");
@@ -294,34 +375,35 @@ internal class OverlayMessenger
     /// </returns>
     public static bool CheckForProblematicCases(Process process)
     {
-        if (process == null)
-            throw new ArgumentNullException(nameof(process));
+        /* if (process == null)
+             throw new ArgumentNullException(nameof(process));
 
-        try
-        {
-            var processFolder = Path.GetDirectoryName(process.MainModule.FileName);
-            if (string.IsNullOrEmpty(processFolder))
-                return false;
+         try
+         {
+             var processFolder = Path.GetDirectoryName(process.MainModule.FileName);
+             if (string.IsNullOrEmpty(processFolder))
+                 return false;
 
-            var unityDllPath = Path.Combine(processFolder, "UnityPlayer.dll");
-            var versionDllPath = Path.Combine(processFolder, "version.dll");
-            var winhttpDllPath = Path.Combine(processFolder, "winhttp.dll");
+             var unityDllPath = Path.Combine(processFolder, "UnityPlayer.dll");
+             var versionDllPath = Path.Combine(processFolder, "version.dll");
+             var winhttpDllPath = Path.Combine(processFolder, "winhttp.dll");
 
-            var unityExists = File.Exists(unityDllPath);
-            var versionExists = File.Exists(versionDllPath);
-            var winhttpExists = File.Exists(winhttpDllPath);
+             var unityExists = File.Exists(unityDllPath);
+             var versionExists = File.Exists(versionDllPath);
+             var winhttpExists = File.Exists(winhttpDllPath);
 
-            return unityExists && (versionExists || winhttpExists);
-        }
-        catch (Win32Exception)
-        {
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error checking DLLs for process {process.ProcessName}: {ex}");
-            return false;
-        }
+             return unityExists && (versionExists || winhttpExists);
+         }
+         catch (Win32Exception)
+         {
+             return false;
+         }
+         catch (Exception ex)
+         {
+             Debug.WriteLine($"Error checking DLLs for process {process.ProcessName}: {ex}");
+             return false;
+         }*/
+        return false;
     }
 
     #region WinAPI

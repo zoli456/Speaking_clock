@@ -162,7 +162,7 @@ internal class OnlineRadioPlayer
         }
     }
 
-    public static void SetVolume(float volume)
+    internal static void SetVolume(float volume)
     {
         lock (_lock)
         {

@@ -2,10 +2,12 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 #include "CodeDependencies.iss"
 #define MyAppName "Beszélő óra"
-#define MyAppVersion "1.51"
+#define MyAppVersion "1.60"
 #define MyAppPublisher "Zoli456 Software"
 #define MyAppURL "https://zsoftware.ct.ws/speaking_clock.html"
 #define MyAppExeName "Speaking_Clock.exe"
+#define VCREDIST_X86_URL "https://aka.ms/vs/17/release/vc_redist.x86.exe"
+#define VCREDIST_X64_URL "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -41,8 +43,7 @@ Name: "hungarian"; MessagesFile: "compiler:Languages\Hungarian.isl"
 
 [Components]
 Name: "main"; Description: "Alkalmazás"; Types: full compact custom; Flags: fixed
-Name: "vcredist"; Description: "Visual C++ Könyvtárak"; Types: full custom; Flags: checkablealone
-
+Name: "vcredist"; Description: "Microsoft Visual C++ 2015–2022 futtatókörnyezet"; Types: full custom
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -97,6 +98,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent runascurrentuser;
 
+
 [Code]
 function InitializeSetup: Boolean;
 begin
@@ -104,6 +106,12 @@ Dependency_AddDotNet90Desktop;
   Result := True;
 end;
 
+var
+  DownloadPage: TDownloadWizardPage;
+
+//
+// ---------------- WIZARD INIT ----------------
+//
 procedure InitializeWizard;
 var
   ResultCode: Integer;
@@ -113,132 +121,73 @@ begin
     MsgBox('Ennek az alkalmazásnak Windows 10 (64-bit) vagy újabbra rendszerre van szüksége. A telepítés megszakadt.', mbError, MB_OK);
     Abort;
   end;
+  DownloadPage :=
+    CreateDownloadPage(
+      'Fájlok letöltés',
+      'Kérem várjon amíg a szükséges fájlok letöltése folyamatban van.',
+      nil
+    );
 end;
 
-const
-  GitHubAPIURL = 'https://api.github.com/repos/abbodi1406/vcredist/releases/latest';
-  VCRedistFileName = 'VisualCppRedist_AIO_x86_x64.exe';
-
-function OnDownloadProgress(const Url, Filename: String; const Progress, ProgressMax: Int64): Boolean;
-begin
-  if ProgressMax <> 0 then
-    Log(Format('Downloading %s: %d of %d bytes...', [Filename, Progress, ProgressMax]))
-  else
-    Log(Format('Downloading %s: %d bytes...', [Filename, Progress]));
-  Result := True;
-end;
-
-function DownloadString(const URL: string): string;
+//
+// ---------------- DOWNLOAD + INSTALL ----------------
+//
+procedure DownloadAndInstallVCRedist(const Url, FileName: String);
 var
-  Http: Variant;
-begin
-  Result := '';
-  try
-    Http := CreateOleObject('MSXML2.XMLHTTP');
-    Http.Open('GET', URL, False);
-    Http.setRequestHeader('User-Agent', 'InnoSetup');
-    Http.Send;
-    if Http.Status = 200 then
-      Result := Http.ResponseText;
-  except
-    Log('Failed to fetch URL: ' + URL);
-  end;
-end;
-
-// Helper functions for simple substring search
-function PosSimple(const SubStr, Str: string; StartPos: Integer): Integer;
-var
-  I: Integer;
-begin
-  Result := 0;
-  for I := StartPos to Length(Str) - Length(SubStr) + 1 do
-  begin
-    if Copy(Str, I, Length(SubStr)) = SubStr then
-    begin
-      Result := I;
-      Exit;
-    end;
-  end;
-end;
-
-function RPosSimple(const SubStr, Str: string; BeforeIndex: Integer): Integer;
-var
-  I: Integer;
-begin
-  Result := 0;
-  if BeforeIndex > Length(Str) then
-    BeforeIndex := Length(Str);
-  for I := 1 to BeforeIndex - Length(SubStr) + 1 do
-  begin
-    if Copy(Str, I, Length(SubStr)) = SubStr then
-      Result := I;
-  end;
-end;
-
-// Extract the asset URL from GitHub JSON
-function ExtractDownloadURL(const Json: string): string;
-var
-  SearchStr: string;
-  P1, P2: Integer;
-begin
-  Result := '';
-  SearchStr := '"' + VCRedistFileName + '"';
-  P1 := PosSimple(SearchStr, Json, 1);
-  if P1 > 0 then
-  begin
-    P1 := RPosSimple('"browser_download_url":"', Json, P1);
-    if P1 > 0 then
-    begin
-      P1 := P1 + Length('"browser_download_url":"');
-      P2 := PosSimple('"', Json, P1);
-      if P2 > P1 then
-        Result := Copy(Json, P1, P2 - P1);
-    end;
-  end;
-end;
-
-// Main VC++ install routine
-procedure InstallVCRedist;
-var
-  Json, DownloadURL, TempFile: string;
   ResultCode: Integer;
 begin
-  Log('Checking for latest VC++ release...');
-  Json := DownloadString(GitHubAPIURL);
-  if Json = '' then
-  begin
-    MsgBox('Nem sikerült elérni a GitHub API-t. Kézi Visual C++ Redistributable telepítés szükséges.', mbError, MB_OK);
-    Exit;
-  end;
+  DownloadPage.Clear;
+  DownloadPage.Add(Url, FileName, '');
+  DownloadPage.Show;
 
-  DownloadURL := ExtractDownloadURL(Json);
-  if DownloadURL = '' then
-  begin
-    MsgBox('Nem található a VisualCppRedist_AIO_x86_x64.exe a GitHub kiadásban.', mbError, MB_OK);
-    Exit;
-  end;
-
-  Log('Downloading from: ' + DownloadURL);
   try
-    DownloadTemporaryFile(DownloadURL, VCRedistFileName, '', @OnDownloadProgress);
-    TempFile := ExpandConstant('{tmp}\') + VCRedistFileName;
+    DownloadPage.Download;
   except
-    MsgBox('Nem sikerült letölteni a VisualCppRedist_AIO_x86_x64.exe fájlt.' + #13#10 + GetExceptionMessage, mbError, MB_OK);
-    Exit;
+    MsgBox(
+      'Sikertelen letöltés:'#13#10 + Url,
+      mbError,
+      MB_OK
+    );
+    Abort;
   end;
 
-  if FileExists(TempFile) then
+  DownloadPage.Hide;
+
+  if not Exec(
+    ExpandConstant('{tmp}\' + FileName),
+    '/passive /norestart',
+    '',
+    SW_SHOW,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) then
   begin
-    Log('Running VisualCppRedist installer...');
-    Exec(TempFile, '/y', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
-  end
-  else
-    MsgBox('A letöltött fájl nem található: ' + TempFile, mbError, MB_OK);
+    MsgBox(
+      'Visual C++ futtatókörnyezet telepítése sikertelen.',
+      mbError,
+      MB_OK
+    );
+    Abort;
+  end;
 end;
 
-// Run VC++ setup if component selected
-procedure CurStepChanged(CurStep: TSetupStep);
+//
+// ---------------- INSTALL PHASE ----------------
+//
+function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  if (CurStep = ssInstall) and WizardIsComponentSelected('vcredist') then
-    InstallVCRedist;
+  if IsComponentSelected('vcredist') then
+  begin
+    DownloadAndInstallVCRedist(
+      '{#VCREDIST_X86_URL}',
+      'vc_redist.x86.exe'
+    );
+
+    DownloadAndInstallVCRedist(
+      '{#VCREDIST_X64_URL}',
+      'vc_redist.x64.exe'
+    );
+  end;
+
+  Result := '';
 end;

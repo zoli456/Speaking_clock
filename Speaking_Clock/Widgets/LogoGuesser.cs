@@ -9,15 +9,11 @@ using Vanara.PInvoke;
 using Vortice;
 using Vortice.Direct2D1;
 using Vortice.DirectWrite;
-using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.WIC;
-using Vortice.WinForms;
-using AlphaMode = Vortice.DCommon.AlphaMode;
 using BitmapInterpolationMode = Vortice.Direct2D1.BitmapInterpolationMode;
 using Color = System.Drawing.Color;
 using FontStyle = Vortice.DirectWrite.FontStyle;
-using PixelFormat = Vortice.DCommon.PixelFormat;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Speaking_Clock.Widgets;
@@ -25,84 +21,70 @@ namespace Speaking_Clock.Widgets;
 public class LogoData
 {
     [JsonPropertyName("filename")] public string Filename { get; set; }
-
     [JsonPropertyName("full_filename")] public string FullFilename { get; set; }
-
     [JsonPropertyName("logo_name")] public string LogoName { get; set; }
 }
 
-public class LogoGuesser : RenderForm
+public class LogoGuesser : CompositionWidgetBase
 {
     private const float MinimizeButtonSize = 30f;
     private const float MinimizeButtonPadding = 5f;
     private readonly Timer _nextRoundTimer;
     private readonly Random _random = new((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+    private readonly IWICImagingFactory _wicFactory;
 
     private List<LogoData> _allLogos;
     private HashSet<char> _alreadyGuessedChars;
     private ID2D1SolidColorBrush _borderBrush;
     private ID2D1SolidColorBrush _buttonBrush;
 
-
     private int _correctlyGuessedLogosCount;
-
     private LogoData _currentLogo;
     private ID2D1Bitmap _currentLogoBitmap;
     private string _currentLogoNameNormalized = "";
 
-
-    private IDWriteFactory _dwriteFactory;
     private GameState _gameState;
     private StringBuilder _guessedCharsDisplay;
     private ID2D1SolidColorBrush _inputBackgroundBrush;
 
     private RectangleF _inputDisplayRect;
-    private bool _isDragging;
+
     private bool _isMinimized = true;
     private ID2D1SolidColorBrush _minimizeButtonBrush;
     private RectangleF _minimizeButtonRect;
     private Point _mouseDownLocation;
-    private ID2D1HwndRenderTarget _renderTarget;
+
     private bool _showFullLogo;
     private ID2D1SolidColorBrush _skipButtonBrush;
-
     private RectangleF _skipButtonRect;
     private int _skippedLogosCount;
 
     private ID2D1SolidColorBrush _startButtonBrush;
     private RectangleF _startButtonRect;
     private ID2D1SolidColorBrush _textBrush;
+
     private IDWriteTextFormat _textFormatButton;
     private IDWriteTextFormat _textFormatInput;
     private IDWriteTextFormat _textFormatScore;
-    private IWICImagingFactory _wicFactory;
-
 
     public LogoGuesser(int startX, int startY)
+        : base(startX, startY, 160, 40)
     {
-        Opacity = 1;
         Text = "Logo Guesser Widget";
-        FormBorderStyle = FormBorderStyle.None;
-        StartPosition = FormStartPosition.Manual;
-        Location = new Point(startX, startY);
-        ShowInTaskbar = false;
-        Width = 160;
-        Height = 40;
-        KeyPreview = true; // Important for capturing key presses
-
-        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-        AllowTransparency = true;
         BackColor = Color.FromArgb(45, 45, 48);
-        TransparencyKey = Color.Magenta;
+        KeyPreview = true;
 
-
+        MouseDown -= OnBaseMouseDown;
+        MouseMove -= OnBaseMouseMove;
+        MouseUp -= OnBaseMouseUp;
         MouseDown += Widget_MouseDown;
         MouseMove += Widget_MouseMove;
         MouseUp += Widget_MouseUp;
-        KeyPress += Widget_KeyPress;
-        Closed += Widget_Closed;
 
         _gameState = GameState.Minimized;
+        _wicFactory = GraphicsFactories.WicFactory;
+
+        CreateDeviceIndependentResources();
 
         _nextRoundTimer = new Timer { Interval = 3000 };
         _nextRoundTimer.Tick += (s, e) =>
@@ -111,33 +93,8 @@ public class LogoGuesser : RenderForm
             StartNewRound();
         };
 
-        Show();
+        KeyPress += Widget_KeyPress;
         LoadLogosDataAsync();
-    }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= (int)User32.WindowStylesEx.WS_EX_LAYERED | (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
-        }
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        InitializeDirectXComponents();
-    }
-
-    private void InitializeDirectXComponents()
-    {
-        _dwriteFactory = GraphicsFactories.DWriteFactory;
-        _wicFactory = GraphicsFactories.WicFactory;
-
-        CreateDeviceIndependentResources();
-        CreateRenderTarget();
     }
 
     private void CreateDeviceIndependentResources()
@@ -148,7 +105,6 @@ public class LogoGuesser : RenderForm
         _textFormatInput.TextAlignment = TextAlignment.Center;
         _textFormatInput.ParagraphAlignment = ParagraphAlignment.Center;
         _textFormatInput.WordWrapping = WordWrapping.NoWrap;
-
 
         _textFormatScore?.Dispose();
         _textFormatScore =
@@ -163,54 +119,19 @@ public class LogoGuesser : RenderForm
         _textFormatButton.ParagraphAlignment = ParagraphAlignment.Center;
     }
 
-    private void CreateRenderTarget()
+    private void CheckAndCreateBrushes(ID2D1DeviceContext context)
     {
-        _renderTarget?.Dispose();
-        if (Width == 0 || Height == 0) return;
+        if (_textBrush != null && _textBrush.Factory.NativePointer == context.Factory.NativePointer) return;
 
-        var rtProps = new RenderTargetProperties
-        {
-            Type = RenderTargetType.Hardware,
-            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
-            DpiX = 96f,
-            DpiY = 96f,
-            Usage = RenderTargetUsage.GdiCompatible,
-            MinLevel = FeatureLevel.Level_9
-        };
+        DisposeBrushes();
 
-        var hwndProps = new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        };
-
-        _renderTarget = GraphicsFactories.D2DFactory
-            .CreateHwndRenderTarget(rtProps, hwndProps);
-        CreateDeviceDependentResources();
-    }
-
-    private void CreateDeviceDependentResources()
-    {
-        _textBrush?.Dispose();
-        _buttonBrush?.Dispose();
-        _borderBrush?.Dispose();
-        _startButtonBrush?.Dispose();
-        _minimizeButtonBrush?.Dispose();
-        _skipButtonBrush?.Dispose();
-        _inputBackgroundBrush?.Dispose();
-
-        if (_renderTarget == null) return;
-
-        _textBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.White.ToArgb()));
-        _buttonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 70, 70, 75).ToArgb()));
-        _inputBackgroundBrush =
-            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 50, 50, 55).ToArgb()));
-        _borderBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 90, 90, 95).ToArgb()));
-        _startButtonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 0, 122, 204).ToArgb()));
-        _minimizeButtonBrush =
-            _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 80, 80, 85).ToArgb()));
-        _skipButtonBrush = _renderTarget.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 200, 80, 80).ToArgb()));
+        _textBrush = context.CreateSolidColorBrush(new Color4(Color.White.ToArgb()));
+        _buttonBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 70, 70, 75).ToArgb()));
+        _inputBackgroundBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 50, 50, 55).ToArgb()));
+        _borderBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 90, 90, 95).ToArgb()));
+        _startButtonBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 0, 122, 204).ToArgb()));
+        _minimizeButtonBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 80, 80, 85).ToArgb()));
+        _skipButtonBrush = context.CreateSolidColorBrush(new Color4(Color.FromArgb(255, 200, 80, 80).ToArgb()));
     }
 
     private async void LoadLogosDataAsync()
@@ -231,8 +152,10 @@ public class LogoGuesser : RenderForm
                 }
                 else
                 {
-                    throw new FileNotFoundException(
-                        $"Resource '{resourceName}' or file '{filePath}' not found. Ensure 'logos_corrected.json' is an embedded resource or in the output directory.");
+                    // Error state handled in draw loop
+                    _gameState = GameState.Error;
+                    Invalidate();
+                    return;
                 }
             }
             else
@@ -240,7 +163,6 @@ public class LogoGuesser : RenderForm
                 _allLogos = await JsonSerializer.DeserializeAsync<List<LogoData>>(stream,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
-
 
             _allLogos = _allLogos?
                 .Where(logo => !string.IsNullOrWhiteSpace(logo.Filename) &&
@@ -250,9 +172,6 @@ public class LogoGuesser : RenderForm
 
             if (_allLogos == null || _allLogos.Count == 0)
             {
-                MessageBox.Show(
-                    "Not enough valid logo data (missing filenames or logo names) to start the game.",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _gameState = GameState.Error;
                 Invalidate();
                 return;
@@ -261,10 +180,8 @@ public class LogoGuesser : RenderForm
             _gameState = GameState.Minimized;
             Invalidate();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            MessageBox.Show($"Error loading logo data: {ex.Message}\nStackTrace: {ex.StackTrace}", "Error",
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
             _gameState = GameState.Error;
             Invalidate();
         }
@@ -288,21 +205,19 @@ public class LogoGuesser : RenderForm
 
         _guessedCharsDisplay = new StringBuilder();
         for (var i = 0; i < _currentLogoNameNormalized.Length; i++)
-            if (_currentLogoNameNormalized[i] == ' ') // Preserve spaces from normalized name
+            if (_currentLogoNameNormalized[i] == ' ')
                 _guessedCharsDisplay.Append(' ');
             else
                 _guessedCharsDisplay.Append('_');
         _alreadyGuessedChars = new HashSet<char>();
 
         LoadLogoImage(_currentLogo.Filename);
-
         _gameState = GameState.ShowingQuestion;
         Invalidate();
     }
 
     private string NormalizeString(string input)
     {
-        //ToUpper and replace multiple spaces with one, trim.
         if (string.IsNullOrWhiteSpace(input)) return "";
         var upper = input.ToUpperInvariant();
         return Regex.Replace(upper, @"\s+", " ").Trim();
@@ -310,54 +225,53 @@ public class LogoGuesser : RenderForm
 
     private void LoadLogoImage(string fileName, bool isFullImage = false)
     {
+        // Bitmaps must be recreated during Draw or cached. 
+        // Note: In Direct2D with Composition, resources are bound to the device.
+        // We will reload the bitmap stream here, but defer creation or create it immediately if context is available.
+        // Since we don't have context easily here without storing it (which is risky), we will flag it to be loaded in DrawContent
+        // or rely on the fact that we can't easily create it without the context.
+
+        // HOWEVER, for this widget refactor, we can assume the bitmap needs to be created using the current device context.
+        // The cleanest way without major architecture change is to load bytes to memory, then create texture in Draw.
+        // BUT, we can access _d2dContext from base if we are on the same thread.
+
+        if (_d2dContext != null) LoadLogoBitmapInternal(_d2dContext, fileName, isFullImage);
+        Invalidate();
+    }
+
+    private void LoadLogoBitmapInternal(ID2D1DeviceContext context, string fileName, bool isFullImage)
+    {
         _currentLogoBitmap?.Dispose();
         _currentLogoBitmap = null;
 
-        if (string.IsNullOrWhiteSpace(fileName))
-            return;
+        if (string.IsNullOrWhiteSpace(fileName)) return;
 
         try
         {
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             var archivePath = Path.Combine(baseDirectory, "Assets", "logos", "logo.dat");
 
-            if (!File.Exists(archivePath))
-            {
-                Console.WriteLine($"Logo archive not found: {archivePath}");
-                return;
-            }
+            if (!File.Exists(archivePath)) return;
 
             using var archive = ArchiveFactory.Open(archivePath);
-            var entry = archive.Entries
-                .FirstOrDefault(e =>
-                    !e.IsDirectory &&
-                    string.Equals(Path.GetFileName(e.Key), fileName, StringComparison.OrdinalIgnoreCase));
+            var entry = archive.Entries.FirstOrDefault(e =>
+                !e.IsDirectory && string.Equals(Path.GetFileName(e.Key), fileName, StringComparison.OrdinalIgnoreCase));
 
-            if (entry == null)
-            {
-                Console.WriteLine($"Logo '{fileName}' not found inside archive '{archivePath}'");
-                return;
-            }
+            if (entry == null) return;
 
             using var memoryStream = new MemoryStream();
             entry.WriteTo(memoryStream);
             memoryStream.Position = 0;
 
-            if (_renderTarget != null)
-            {
-                _currentLogoBitmap = LoadBitmapFromStream(_renderTarget, memoryStream, _wicFactory);
-                if (isFullImage)
-                    _showFullLogo = true;
-            }
+            // Load directly using the context
+            _currentLogoBitmap = LoadBitmapFromStream(context, memoryStream, _wicFactory);
+            if (isFullImage) _showFullLogo = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error loading logo '{fileName}' from archive: {ex.Message}");
+            /* Log error */
         }
-
-        Invalidate();
     }
-
 
     public static ID2D1Bitmap LoadBitmapFromStream(ID2D1RenderTarget renderTarget, Stream stream,
         IWICImagingFactory wicFactory)
@@ -365,60 +279,51 @@ public class LogoGuesser : RenderForm
         using var wicBitmapDecoder = wicFactory.CreateDecoderFromStream(stream);
         using var wicFrameDecode = wicBitmapDecoder.GetFrame(0);
         using var wicConverter = wicFactory.CreateFormatConverter();
-        wicConverter.Initialize(wicFrameDecode, Vortice.WIC.PixelFormat.Format32bppPBGRA, BitmapDitherType.None, null,
-            0.0,
+        wicConverter.Initialize(wicFrameDecode, PixelFormat.Format32bppPBGRA, BitmapDitherType.None, null, 0.0,
             BitmapPaletteType.MedianCut);
         return renderTarget.CreateBitmapFromWicBitmap(wicConverter);
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    protected override void DrawContent(ID2D1DeviceContext context)
     {
-        base.OnPaint(e);
+        CheckAndCreateBrushes(context);
 
-        if (_renderTarget == null)
+        // If bitmap is null but we have a logo, try to reload it (context restoration handling)
+        if (_currentLogoBitmap == null && _currentLogo != null && _gameState != GameState.Error)
         {
-            CreateRenderTarget();
-            if (_renderTarget == null) return;
+            var file = _showFullLogo ? _currentLogo.FullFilename : _currentLogo.Filename;
+            LoadLogoBitmapInternal(context, file, _showFullLogo);
         }
 
-        _renderTarget.BeginDraw();
-        _renderTarget.Clear(ToColor4(Color.Gray));
-
+        // Clear to widget background color
+        context.Clear(new Color4(BackColor.R / 255.0f, BackColor.G / 255.0f, BackColor.B / 255.0f));
 
         if (_isMinimized)
-            DrawMinimizedScreen(_renderTarget);
+            DrawMinimizedScreen(context);
         else
             switch (_gameState)
             {
                 case GameState.Initializing:
-                    DrawCenteredText(_renderTarget, "Initializing Logos...", ClientRectangle, _textFormatButton);
+                    DrawCenteredText(context, "Initializing Logos...", ClientRectangle, _textFormatButton);
                     break;
                 case GameState.Error:
-                    DrawCenteredText(_renderTarget, "An error occurred. Please restart.", ClientRectangle,
-                        _textFormatButton);
+                    DrawCenteredText(context, "An error occurred. Please restart.", ClientRectangle, _textFormatButton);
                     break;
                 case GameState.ShowingQuestion:
                 case GameState.ShowingResult:
-                    DrawGameScreen(_renderTarget);
+                    DrawGameScreen(context);
                     break;
             }
-
-        _renderTarget.EndDraw();
     }
 
-    private Color4 ToColor4(Color color)
-    {
-        return new Color4(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, color.A / 255.0f);
-    }
-
-    private void DrawCenteredText(ID2D1RenderTarget rt, string text, RectangleF bounds, IDWriteTextFormat format,
+    private void DrawCenteredText(ID2D1DeviceContext rt, string text, RectangleF bounds, IDWriteTextFormat format,
         ID2D1Brush brush = null)
     {
         if (format != null && (brush ?? _textBrush) != null)
             rt.DrawText(text, format, (Rect)bounds, brush ?? _textBrush);
     }
 
-    private void DrawGameScreen(ID2D1RenderTarget rt)
+    private void DrawGameScreen(ID2D1DeviceContext rt)
     {
         _minimizeButtonRect = new RectangleF(
             Width - MinimizeButtonSize - MinimizeButtonPadding,
@@ -430,7 +335,6 @@ public class LogoGuesser : RenderForm
         var minusLine = new RectangleF(_minimizeButtonRect.Left + 7,
             _minimizeButtonRect.Top + _minimizeButtonRect.Height / 2 - 1, _minimizeButtonRect.Width - 14, 2);
         rt.FillRectangle(minusLine, _textBrush);
-
 
         var topMargin = MinimizeButtonSize + MinimizeButtonPadding * 2;
         var contentPadding = 15f;
@@ -482,7 +386,7 @@ public class LogoGuesser : RenderForm
 
         var currentGuessedString = _guessedCharsDisplay?.ToString() ?? "";
 
-        // Font size adjustment logic
+        // Dynamic font resizing logic
         if (!string.IsNullOrEmpty(currentGuessedString) && _inputDisplayRect.Width > 0)
             using (var textLayout = _dwriteFactory.CreateTextLayout(currentGuessedString, _textFormatInput,
                        _inputDisplayRect.Width, _inputDisplayRect.Height))
@@ -503,11 +407,10 @@ public class LogoGuesser : RenderForm
                 }
             }
 
-        var stringToDrawOnScreen = " "; // Default to a single space
+        var stringToDrawOnScreen = " ";
         if (!string.IsNullOrEmpty(currentGuessedString))
             stringToDrawOnScreen = string.Join(" ", currentGuessedString.ToCharArray());
         DrawCenteredText(rt, stringToDrawOnScreen, _inputDisplayRect, _textFormatInput);
-
 
         var skipButtonTopY = _inputDisplayRect.Bottom + spacing * 2;
         _skipButtonRect = new RectangleF(Width / 2f - 60f, skipButtonTopY, 120f, buttonHeight);
@@ -516,12 +419,17 @@ public class LogoGuesser : RenderForm
         DrawCenteredText(rt, "KIHAGY", _skipButtonRect, _textFormatButton);
     }
 
-
-    protected override void OnResize(EventArgs e)
+    // Disable generic dragging to implement Right-Click only dragging
+    protected override bool CanDrag()
     {
-        base.OnResize(e);
-        CreateRenderTarget();
-        Invalidate();
+        return false;
+    }
+
+    protected override void SavePosition(int x, int y)
+    {
+        Beallitasok.WidgetSection["Logo_X"].IntValue = x;
+        Beallitasok.WidgetSection["Logo_Y"].IntValue = y;
+        Beallitasok.ConfigParser.SaveToFile(Path.Combine(Beallitasok.BasePath, Beallitasok.SetttingsFileName));
     }
 
     private void Widget_MouseDown(object sender, MouseEventArgs e)
@@ -595,26 +503,22 @@ public class LogoGuesser : RenderForm
             return;
 
         var keyPressed = char.ToUpperInvariant(e.KeyChar);
-        // Allow letters, digits, and spaces
         if (!char.IsLetterOrDigit(keyPressed) && !(keyPressed == ' ' && _currentLogoNameNormalized.Contains(' ')))
             return;
 
-        if (_alreadyGuessedChars.Contains(keyPressed))
-            return;
+        if (_alreadyGuessedChars.Contains(keyPressed)) return;
 
         _alreadyGuessedChars.Add(keyPressed);
         var found = false;
         for (var i = 0; i < _currentLogoNameNormalized.Length; i++)
             if (_currentLogoNameNormalized[i] == keyPressed)
             {
-                // Use original casing for display from the original LogoName, not normalized one
                 _guessedCharsDisplay[i] = _currentLogo.LogoName[i];
                 found = true;
             }
 
         if (found)
         {
-            // Check if all non-space characters are revealed
             var allRevealed = true;
             var currentDisplay = _guessedCharsDisplay.ToString();
             for (var i = 0; i < currentDisplay.Length; i++)
@@ -636,10 +540,9 @@ public class LogoGuesser : RenderForm
         Invalidate();
     }
 
-
     private void HandleSkip()
     {
-        if (_currentLogo == null) return; // If there's no current logo, do nothing
+        if (_currentLogo == null) return;
 
         _skippedLogosCount++;
         _gameState = GameState.ShowingResult;
@@ -654,20 +557,28 @@ public class LogoGuesser : RenderForm
                         _guessedCharsDisplay[i] = _currentLogoNameNormalized[i];
                 }
 
-        // Load the full version of the logo image to show the visual answer
         LoadLogoImage(_currentLogo.FullFilename, true);
-
-        // Start the timer for the next round
         _nextRoundTimer.Start();
-
-        // Request a repaint to show the changes
         Invalidate();
     }
 
-
-    private void Widget_Closed(object? sender, EventArgs e)
+    private void DisposeBrushes()
     {
-        Dispose();
+        _textBrush?.Dispose();
+        _buttonBrush?.Dispose();
+        _inputBackgroundBrush?.Dispose();
+        _borderBrush?.Dispose();
+        _startButtonBrush?.Dispose();
+        _minimizeButtonBrush?.Dispose();
+        _skipButtonBrush?.Dispose();
+
+        _textBrush = null;
+        _buttonBrush = null;
+        _inputBackgroundBrush = null;
+        _borderBrush = null;
+        _startButtonBrush = null;
+        _minimizeButtonBrush = null;
+        _skipButtonBrush = null;
     }
 
     protected override void Dispose(bool disposing)
@@ -676,28 +587,17 @@ public class LogoGuesser : RenderForm
         {
             _nextRoundTimer?.Dispose();
             _currentLogoBitmap?.Dispose();
-            _textBrush?.Dispose();
-            _buttonBrush?.Dispose();
-            _inputBackgroundBrush?.Dispose();
-            _borderBrush?.Dispose();
-            _startButtonBrush?.Dispose();
-            _minimizeButtonBrush?.Dispose();
-            _skipButtonBrush?.Dispose();
+            DisposeBrushes();
             _textFormatInput?.Dispose();
             _textFormatScore?.Dispose();
             _textFormatButton?.Dispose();
-            _renderTarget?.Dispose();
         }
 
         base.Dispose(disposing);
     }
 
-    private void DrawMinimizedScreen(ID2D1RenderTarget rt)
+    private void DrawMinimizedScreen(ID2D1DeviceContext rt)
     {
-        BackColor = Color.FromArgb(45, 45, 48);
-        TransparencyKey = Color.Magenta;
-        rt.Clear(ToColor4(BackColor));
-
         _startButtonRect = new RectangleF(0, 0, Width, Height);
         rt.FillRectangle(_startButtonRect, _startButtonBrush);
         rt.DrawRectangle(_startButtonRect, _borderBrush, 1.5f);
@@ -709,11 +609,8 @@ public class LogoGuesser : RenderForm
         _isMinimized = false;
         Width = 400;
         Height = 550;
-        BackColor = Color.FromArgb(45, 45, 48);
-        TransparencyKey = Color.Magenta;
         _gameState = GameState.Initializing;
         Invalidate();
-        Application.DoEvents();
         StartNewRound();
     }
 
@@ -723,8 +620,6 @@ public class LogoGuesser : RenderForm
         _gameState = GameState.Minimized;
         Width = 160;
         Height = 40;
-        BackColor = Color.FromArgb(45, 45, 48);
-        TransparencyKey = Color.Magenta;
         Invalidate();
     }
 
@@ -732,7 +627,6 @@ public class LogoGuesser : RenderForm
     {
         if (m.Msg == (int)User32.WindowMessage.WM_DISPLAYCHANGE)
             RepositionOverlay();
-
         base.WndProc(ref m);
     }
 
@@ -741,7 +635,6 @@ public class LogoGuesser : RenderForm
         Left = Beallitasok.WidgetSection["Logo_X"].IntValue;
         Top = Beallitasok.WidgetSection["Logo_Y"].IntValue;
     }
-
 
     private enum GameState
     {

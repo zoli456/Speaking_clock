@@ -1,19 +1,12 @@
 ﻿using System.Numerics;
 using Speaking_Clock;
-using Vortice.DCommon;
 using Vortice.Direct2D1;
-using Vortice.DXGI;
 using Vortice.Mathematics;
-using Vortice.WinForms;
-using static Vanara.PInvoke.User32;
-using AlphaMode = Vortice.DCommon.AlphaMode;
-using Color = System.Drawing.Color;
-using Size = System.Drawing.Size;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Speaking_clock.Widgets;
 
-public class DotMatrixClock : RenderForm
+public class DotMatrixClock : CompositionWidgetBase
 {
     private readonly float _digitSpacing = 80;
     private readonly bool _showSeconds;
@@ -21,53 +14,19 @@ public class DotMatrixClock : RenderForm
     private ID2D1SolidColorBrush _dotBrush;
     private float _dotSize = 10;
     private float _dotSpacing = 15;
-    private bool _isDragging;
-    private Point _mouseDownLocation;
-    private ID2D1HwndRenderTarget _renderTarget;
     private bool _showColon = true;
 
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="DotMatrixClock" /> class.
-    /// </summary>
-    /// <param name="showSeconds"></param>
-    /// <param name="startX"></param>
-    /// <param name="startY"></param>
-    /// <param name="DotSize"></param>
-    /// <param name="DotSpacing"></param>
-    /// <param name="DigitSpacing"></param>
     public DotMatrixClock(bool showSeconds, int startX, int startY, int DotSize = 10, int DotSpacing = 15,
         float DigitSpacing = 80)
+        : base(startX, startY, showSeconds ? 720 : 420, 110)
     {
         Opacity = 0.9f;
-        // Initialize the form
         _dotSize = DotSize;
         _dotSpacing = DotSpacing;
         _digitSpacing = DigitSpacing;
+        _showSeconds = showSeconds;
+
         Text = "Dot Matrix Clock";
-        FormBorderStyle = FormBorderStyle.None;
-        //BackColor = Color.Black; // Transparent color
-        StartPosition = FormStartPosition.CenterScreen;
-        if (showSeconds)
-            Size = new Size(720, 110);
-        else
-            Size = new Size(420, 110);
-
-        ShowInTaskbar = false;
-
-        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-        AllowTransparency = true;
-        BackColor = Color.FromArgb(0, 0, 0, 0);
-        TransparencyKey = BackColor;
-
-        // Set starting position
-        StartPosition = FormStartPosition.Manual;
-        Location = new Point(startX, startY);
-
-        // Enable drag
-        MouseDown += DotMatrixClock_MouseDown;
-        MouseMove += DotMatrixClock_MouseMove;
-        MouseUp += DotMatrixClock_MouseUp;
-        Closed += DotMatrixClock_Closed;
 
         // Set up a timer for blinking
         _timer = new Timer { Interval = 1000 };
@@ -77,24 +36,6 @@ public class DotMatrixClock : RenderForm
             Invalidate();
         };
         _timer.Start();
-
-        _showSeconds = showSeconds;
-
-        DoubleBuffered = false;
-        Show();
-
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
-    }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            // Add layered style but avoid WS_EX_TRANSPARENT
-            cp.ExStyle |= (int)WindowStylesEx.WS_EX_LAYERED | (int)WindowStylesEx.WS_EX_TOOLWINDOW;
-            return cp;
-        }
     }
 
     public float GetDotSize()
@@ -107,7 +48,7 @@ public class DotMatrixClock : RenderForm
         if (value > 0)
         {
             _dotSize = value;
-            Invalidate(); // Redraw the clock with the updated dot size
+            Invalidate();
         }
     }
 
@@ -121,96 +62,36 @@ public class DotMatrixClock : RenderForm
         if (value > 0)
         {
             _dotSpacing = value;
-            Invalidate(); // Redraw the clock with the updated dot spacing
-        }
-    }
-
-    private void DotMatrixClock_Closed(object? sender, EventArgs e)
-    {
-        _dotBrush?.Dispose();
-        _renderTarget?.Dispose();
-        _timer?.Dispose();
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-
-        // Set window to fully transparent
-        //User32.SetLayeredWindowAttributes(Handle, 0, 0, (User32.LayeredWindowAttributes)LWA_COLORKEY);
-
-        CreateRenderTarget();
-    }
-
-    private void CreateRenderTarget()
-    {
-        _renderTarget?.Dispose();
-        var rtProps = new RenderTargetProperties
-        {
-            Type = RenderTargetType.Hardware,
-            PixelFormat = new PixelFormat(Format.B8G8R8A8_UNorm, AlphaMode.Premultiplied),
-            DpiX = 96f,
-            DpiY = 96f,
-            Usage = RenderTargetUsage.GdiCompatible,
-            MinLevel = FeatureLevel.Level_9
-        };
-
-        var hwndProps = new HwndRenderTargetProperties
-        {
-            Hwnd = Handle,
-            PixelSize = new SizeI(Width, Height),
-            PresentOptions = PresentOptions.None
-        };
-
-        _renderTarget = GraphicsFactories.D2DFactory
-            .CreateHwndRenderTarget(rtProps, hwndProps);
-
-        _dotBrush?.Dispose();
-        _dotBrush = _renderTarget.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
-    }
-
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
-        if (_renderTarget != null)
-        {
-            CreateRenderTarget();
             Invalidate();
         }
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    protected override void DrawContent(ID2D1DeviceContext context)
     {
-        base.OnPaint(e);
-        if (_renderTarget == null)
-            return;
+        if (_dotBrush == null || _dotBrush.Factory.NativePointer != context.Factory.NativePointer)
+        {
+            _dotBrush?.Dispose();
+            _dotBrush = context.CreateSolidColorBrush(new Color4(1.0f, 1.0f, 1.0f));
+        }
 
-        // Begin drawing
-        _renderTarget.BeginDraw();
-        _renderTarget.Clear(new Color4(0, 0, 0, 0));
-
-        // Get the current time
         var time = DateTime.Now;
-        DrawDigit(time.Hour / 10, new Vector2(10, 10));
-        DrawDigit(time.Hour % 10, new Vector2(10 + _digitSpacing, 10));
+        DrawDigit(context, time.Hour / 10, new Vector2(10, 10));
+        DrawDigit(context, time.Hour % 10, new Vector2(10 + _digitSpacing, 10));
 
-        if (_showColon) DrawColon(new Vector2(10 + _digitSpacing * 2, 10));
+        if (_showColon) DrawColon(context, new Vector2(10 + _digitSpacing * 2, 10));
 
-        DrawDigit(time.Minute / 10, new Vector2(10 + _digitSpacing * 2.5f, 10));
-        DrawDigit(time.Minute % 10, new Vector2(10 + _digitSpacing * 3.5f, 10));
+        DrawDigit(context, time.Minute / 10, new Vector2(10 + _digitSpacing * 2.5f, 10));
+        DrawDigit(context, time.Minute % 10, new Vector2(10 + _digitSpacing * 3.5f, 10));
 
         if (_showSeconds)
         {
-            if (_showColon) DrawColon(new Vector2(10 + _digitSpacing * 4.5f, 10));
-            DrawDigit(time.Second / 10, new Vector2(10 + _digitSpacing * 5, 10));
-            DrawDigit(time.Second % 10, new Vector2(10 + _digitSpacing * 6, 10));
+            if (_showColon) DrawColon(context, new Vector2(10 + _digitSpacing * 4.5f, 10));
+            DrawDigit(context, time.Second / 10, new Vector2(10 + _digitSpacing * 5, 10));
+            DrawDigit(context, time.Second % 10, new Vector2(10 + _digitSpacing * 6, 10));
         }
-
-        // End drawing
-        _renderTarget.EndDraw();
     }
 
-    private void DrawDigit(int digit, Vector2 position)
+    private void DrawDigit(ID2D1RenderTarget target, int digit, Vector2 position)
     {
         int[,] patterns =
         {
@@ -320,46 +201,29 @@ public class DotMatrixClock : RenderForm
             if (patterns[digit, row * 5 + col] == 1)
             {
                 var dotPosition = position + new Vector2(col * _dotSpacing, row * _dotSpacing);
-                _renderTarget.FillEllipse(new Ellipse(dotPosition, _dotSize / 2, _dotSize / 2), _dotBrush);
+                target.FillEllipse(new Ellipse(dotPosition, _dotSize / 2, _dotSize / 2), _dotBrush);
             }
     }
 
-    private void DrawColon(Vector2 position)
+    private void DrawColon(ID2D1RenderTarget target, Vector2 position)
     {
         var topDot = position + new Vector2(0, _dotSpacing);
         var bottomDot = position + new Vector2(0, _dotSpacing * 3);
 
-        _renderTarget.FillEllipse(new Ellipse(topDot, _dotSize / 2, _dotSize / 2), _dotBrush);
-        _renderTarget.FillEllipse(new Ellipse(bottomDot, _dotSize / 2, _dotSize / 2), _dotBrush);
+        target.FillEllipse(new Ellipse(topDot, _dotSize / 2, _dotSize / 2), _dotBrush);
+        target.FillEllipse(new Ellipse(bottomDot, _dotSize / 2, _dotSize / 2), _dotBrush);
     }
 
-    private void DotMatrixClock_MouseDown(object sender, MouseEventArgs e)
+    protected override void SavePosition(int x, int y)
     {
-        if (e.Button == MouseButtons.Left && Beallitasok.RSS_Reader_Section["Húzás"].BoolValue)
-        {
-            _isDragging = true;
-            _mouseDownLocation = e.Location;
-        }
+        Beallitasok.WidgetSection["Pontozott_X"].IntValue = x;
+        Beallitasok.WidgetSection["Pontozott_Y"].IntValue = y;
+        Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
     }
 
-    private void DotMatrixClock_MouseMove(object sender, MouseEventArgs e)
+    protected override bool CanDrag()
     {
-        if (_isDragging)
-        {
-            Left += e.X - _mouseDownLocation.X;
-            Top += e.Y - _mouseDownLocation.Y;
-        }
-    }
-
-    private void DotMatrixClock_MouseUp(object sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left)
-        {
-            _isDragging = false;
-            Beallitasok.WidgetSection["Pontozott_X"].IntValue = Left;
-            Beallitasok.WidgetSection["Pontozott_Y"].IntValue = Top;
-            Beallitasok.ConfigParser.SaveToFile($"{Beallitasok.BasePath}\\{Beallitasok.SetttingsFileName}");
-        }
+        return Beallitasok.RSS_Reader_Section["Húzás"].BoolValue;
     }
 
     protected override void Dispose(bool disposing)
@@ -367,24 +231,9 @@ public class DotMatrixClock : RenderForm
         if (disposing)
         {
             _dotBrush?.Dispose();
-            _renderTarget?.Dispose();
             _timer?.Dispose();
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override void WndProc(ref Message m)
-    {
-        if (m.Msg == (int)WindowMessage.WM_DISPLAYCHANGE)
-            RepositionOverlay();
-
-        base.WndProc(ref m);
-    }
-
-    private void RepositionOverlay()
-    {
-        Left = Beallitasok.WidgetSection["Pontozott_X"].IntValue;
-        Top = Beallitasok.WidgetSection["Pontozott_Y"].IntValue;
     }
 }

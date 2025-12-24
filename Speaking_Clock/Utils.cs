@@ -917,6 +917,102 @@ internal class Utils
 
         return filesInMemory;
     }
+
+    /// <summary>
+    ///     Minimizes game process window, opens webpage in default browser,
+    ///     waits until the browser closes, restores and focuses the game again.
+    /// </summary>
+    public static void OpenWebpageAndReturn(string url, Process gameProcess)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                var gameHwnd = new HWND(gameProcess.MainWindowHandle);
+
+                // -------------------------
+                // Minimize game window
+                // -------------------------
+                User32.ShowWindow(gameHwnd, ShowWindowCommand.SW_MINIMIZE);
+
+                // -------------------------
+                // Get the default browser exe name
+                // -------------------------
+                var defaultBrowser = GetDefaultBrowser();
+                var exeName = Path.GetFileNameWithoutExtension(defaultBrowser);
+
+                // -------------------------
+                // Snapshot existing browser windows BEFORE opening URL
+                // -------------------------
+                var before = GetBrowserWindows(exeName);
+
+                // -------------------------
+                // Open URL (shell)
+                // -------------------------
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+
+                // -------------------------
+                // Wait for new browser window to show up
+                // -------------------------
+                var newBrowserWindow = IntPtr.Zero;
+
+                for (var i = 0; i < 200; i++) // 10 seconds
+                {
+                    var after = GetBrowserWindows(exeName);
+
+                    // New windows = after - before
+                    newBrowserWindow = after.Except(before).FirstOrDefault();
+
+                    if (newBrowserWindow != IntPtr.Zero)
+                        break;
+
+                    await Task.Delay(50);
+                }
+
+                // If no new window → browser was already running → skip refocus
+                if (newBrowserWindow == IntPtr.Zero)
+                    return;
+
+                var browserHwnd = new HWND(newBrowserWindow);
+
+                // -------------------------
+                // Focus browser
+                // -------------------------
+                User32.ShowWindow(browserHwnd, ShowWindowCommand.SW_RESTORE);
+                User32.SetForegroundWindow(browserHwnd);
+
+                // -------------------------
+                // Wait until user closes the browser window
+                // -------------------------
+                while (User32.IsWindow(newBrowserWindow))
+                    await Task.Delay(100);
+
+                // -------------------------
+                // Restore game
+                // -------------------------
+                User32.ShowWindow(gameHwnd, ShowWindowCommand.SW_RESTORE);
+                User32.SetForegroundWindow(gameHwnd);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Error in OpenWebpageAndReturn: " + ex);
+            }
+        });
+    }
+
+    private static List<IntPtr> GetBrowserWindows(string exeName)
+    {
+        var list = new List<IntPtr>();
+        foreach (var p in Process.GetProcessesByName(exeName))
+            if (p.MainWindowHandle != IntPtr.Zero)
+                list.Add(p.MainWindowHandle);
+
+        return list;
+    }
 }
 
 internal class CoInitializeScope : IDisposable
